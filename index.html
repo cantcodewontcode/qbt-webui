@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>qBittorrent</title>
+
+  <!-- Google Fonts: served from Google's CDN, not the daemon -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Toolbar ──────────────────────────────────────────────────── -->
+  <header id="toolbar" role="banner">
+    <div class="toolbar__left">
+      <span class="app-name">qBittorrent</span>
+      <div id="conn-status" class="conn-status conn-status--connected"
+           title="Connected" aria-label="Connection status"></div>
+    </div>
+    <div class="toolbar__center">
+      <div class="search-wrap">
+        <span class="icon icon--search" aria-hidden="true"></span>
+        <input type="search" id="search-input" class="search-input"
+               placeholder="Filter torrents…" autocomplete="off" spellcheck="false"
+               aria-label="Filter torrents by name">
+        <button class="btn-ghost icon-btn search-clear" id="search-clear"
+                aria-label="Clear search" hidden></button>
+      </div>
+    </div>
+    <div class="toolbar__right">
+      <button class="speed-readout speed-readout--down" id="speed-down"
+              aria-label="Download speed — click to configure limit">
+        <span class="icon icon--arrow-down" aria-hidden="true"></span>
+        <span class="speed-readout__value" id="speed-down-value">—</span>
+      </button>
+      <button class="speed-readout speed-readout--up" id="speed-up"
+              aria-label="Upload speed — click to configure limit">
+        <span class="icon icon--arrow-up" aria-hidden="true"></span>
+        <span class="speed-readout__value" id="speed-up-value">—</span>
+      </button>
+      <div class="toolbar__divider" aria-hidden="true"></div>
+
+      <button class="btn-ghost icon-btn" id="btn-settings" aria-label="Settings">
+        <span class="icon icon--settings" aria-hidden="true"></span>
+      </button>
+      <button class="btn-primary btn--sm" id="btn-add-torrent">
+        <span class="icon icon--plus" aria-hidden="true"></span>
+        Add Torrent
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Error banner ────────────────────────────────────────────── -->
+
+  <!-- ── Main area ────────────────────────────────────────────────── -->
+  <div id="main-area">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" aria-label="Filter torrents">
+      <nav class="filter-nav">
+        <button class="filter-tab filter-tab--active" data-filter="all" aria-pressed="true">
+          All
+          <span class="filter-count" id="count-all">—</span>
+        </button>
+        <button class="filter-tab" data-filter="downloading" aria-pressed="false" hidden>
+          Downloading
+          <span class="filter-count" id="count-downloading">—</span>
+        </button>
+        <button class="filter-tab" data-filter="seeding" aria-pressed="false" hidden>
+          Seeding
+          <span class="filter-count" id="count-seeding">—</span>
+        </button>
+        <button class="filter-tab" data-filter="paused" aria-pressed="false" hidden>
+          Paused
+          <span class="filter-count" id="count-paused">—</span>
+        </button>
+        <button class="filter-tab" data-filter="fetching" aria-pressed="false" hidden>
+          Fetching
+          <span class="filter-count" id="count-fetching">—</span>
+        </button>
+        <button class="filter-tab" data-filter="finished" aria-pressed="false" hidden>
+          Finished
+          <span class="filter-count" id="count-finished">—</span>
+        </button>
+        <button class="filter-tab" data-filter="errors" aria-pressed="false" hidden>
+          Errors
+          <span class="filter-count" id="count-errors">—</span>
+        </button>
+        <button class="filter-tab" data-filter="checking" aria-pressed="false" hidden>
+          Checking
+          <span class="filter-count" id="count-checking">—</span>
+        </button>
+        <button class="filter-tab" data-filter="stalled" aria-pressed="false" hidden>
+          Stalled
+          <span class="filter-count" id="count-stalled">—</span>
+        </button>
+      </nav>
+      <div id="category-nav"></div>
+    </aside>
+
+    <!-- List area -->
+    <div id="list-area">
+      <div id="col-headers" role="row">
+        <button class="col col-name col-header" data-sort="name" aria-sort="none">Name</button>
+        <button class="col col-size col-header" data-sort="size" aria-sort="none">Size</button>
+        <button class="col col-dl col-header" data-sort="dlspeed" aria-sort="none"
+                aria-label="Download speed">↓</button>
+        <button class="col col-ul col-header" data-sort="upspeed" aria-sort="none"
+                aria-label="Upload speed">↑</button>
+        <button class="col col-peers col-header" data-sort="num_connected" aria-sort="none"
+                aria-label="Peers connected">Peers</button>
+        <button class="col col-ratio col-header" data-sort="ratio" aria-sort="none">Ratio</button>
+        <button class="col col-eta col-header" data-sort="eta" aria-sort="none">ETA</button>
+        <button class="col col-pct col-header" data-sort="progress"
+                aria-sort="none" aria-label="Percent done">%</button>
+      </div>
+      <div id="list-viewport" role="list" aria-label="Torrents" tabindex="0">
+        <!-- Virtualiser renders rows here at runtime -->
+      </div>
+    </div>
+
+    <!-- Inspector -->
+    <aside id="inspector" class="inspector--closed" aria-label="Torrent details" aria-hidden="true">
+      <div id="inspector-header">
+        <span id="inspector-title" class="inspector-title">—</span>
+        <button class="btn-ghost icon-btn" id="btn-inspector-close" aria-label="Close inspector">
+          <span class="icon icon--x" aria-hidden="true"></span>
+        </button>
+      </div>
+      <nav id="inspector-tabs" role="tablist" aria-label="Inspector sections">
+        <button class="inspector-tab inspector-tab--active" role="tab"
+                aria-selected="true" aria-controls="tab-general" data-tab="general">General</button>
+        <button class="inspector-tab" role="tab"
+                aria-selected="false" aria-controls="tab-files" data-tab="files">Files</button>
+        <button class="inspector-tab" role="tab"
+                aria-selected="false" aria-controls="tab-peers" data-tab="peers">Peers</button>
+        <button class="inspector-tab" role="tab"
+                aria-selected="false" aria-controls="tab-trackers" data-tab="trackers">Trackers</button>
+      </nav>
+      <div id="inspector-body">
+        <div id="tab-general" class="inspector-panel" role="tabpanel" aria-labelledby="tab-btn-general"></div>
+        <div id="tab-files"   class="inspector-panel inspector-panel--hidden" role="tabpanel"></div>
+        <div id="tab-peers"   class="inspector-panel inspector-panel--hidden" role="tabpanel"></div>
+        <div id="tab-trackers" class="inspector-panel inspector-panel--hidden" role="tabpanel"></div>
+      </div>
+    </aside>
+
+    <!-- Settings panel — flex sibling in #main-area so it pushes #list-area left -->
+    <div id="settings-panel" class="settings--closed" role="dialog"
+         aria-label="Settings" aria-modal="true" aria-hidden="true">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:var(--space-3) var(--space-4);border-bottom:1px solid var(--color-border);flex-shrink:0;">
+        <span style="font-size:var(--type-heading-2);font-weight:var(--weight-semibold);">Settings</span>
+        <button class="btn-ghost icon-btn" id="btn-settings-close" aria-label="Close settings">
+          <span class="icon icon--x" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="settings-nav-compact">
+        <label class="settings-nav-label" for="settings-section-select">Section</label>
+        <select id="settings-section-select">
+          <option value="speed">Speed</option>
+          <option value="downloads">Downloads</option>
+          <option value="seeding">Seeding</option>
+          <option value="peers">Peers</option>
+          <option value="queue">Queue</option>
+          <option value="ui">Interface</option>
+          <option value="about">About</option>
+        </select>
+      </div>
+      <div class="settings-content">
+        <div id="settings-body"></div>
+      </div>
+    </div>
+
+    <!-- Add Torrent panel — flex sibling in #main-area so it pushes #list-area left -->
+    <div id="add-panel" class="add-panel add-panel--closed" aria-label="Add Torrent"
+         aria-hidden="true">
+      <div class="add-panel__header">
+        <span class="add-panel__title">Add Torrent</span>
+        <button class="btn-ghost icon-btn" id="btn-add-close" aria-label="Close">
+          <span class="icon icon--x" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="add-panel__body">
+        <div class="dropzone" id="torrent-dropzone" tabindex="0"
+             role="button" aria-label="Drop .torrent file here or click to browse">
+          <span class="icon icon--file" aria-hidden="true"></span>
+          <span class="dropzone__label">Drop .torrent file or click to browse</span>
+          <input type="file" id="torrent-file-input" accept=".torrent" class="sr-only">
+        </div>
+        <div class="dropzone-filename" id="dropzone-filename" hidden></div>
+        <div class="add-panel__divider">
+          <span class="add-panel__divider-label">or</span>
+        </div>
+        <div class="field-group">
+          <label class="field-label" for="magnet-input">Magnet link or URL</label>
+          <textarea id="magnet-input" class="input textarea"
+                    placeholder="magnet:?xt=urn:btih:…" rows="3" spellcheck="false"></textarea>
+        </div>
+        <div class="field-group" style="margin-top: var(--space-4);">
+          <label class="field-label" for="add-download-dir">Download to</label>
+          <input type="text" id="add-download-dir" class="input" spellcheck="false">
+        </div>
+        <div class="field-group" style="margin-top: var(--space-3);">
+          <label class="checkbox-label">
+            <input type="checkbox" id="add-start-when-added" checked>
+            Start when added
+          </label>
+        </div>
+      </div>
+      <div class="add-panel__footer">
+        <button class="btn-secondary btn--md" id="btn-add-cancel">Cancel</button>
+        <button class="btn-primary btn--md" id="btn-add-confirm" disabled>Add</button>
+      </div>
+    </div>
+
+  </div><!-- /#main-area -->
+
+</div><!-- /#app -->
+
+<!-- ── Remove Confirmation modal ─────────────────────────────────── -->
+<dialog id="modal-remove-confirm" aria-labelledby="modal-remove-title">
+  <div class="modal-header">
+    <h2 id="modal-remove-title" class="modal-title">Remove torrent?</h2>
+  </div>
+  <div class="modal-body">
+    <p id="modal-remove-desc" class="modal-desc">—</p>
+    <label class="checkbox-label">
+      <input type="checkbox" id="remove-delete-data">
+      Also delete downloaded data from disk
+    </label>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-secondary btn--md modal-cancel">Cancel</button>
+    <button class="btn-destructive btn--md" id="btn-remove-confirm">Remove</button>
+  </div>
+</dialog>
+
+<!-- ── Set Location modal ─────────────────────────────────────────── -->
+<dialog id="modal-set-location" aria-labelledby="modal-set-location-title">
+  <div class="modal-header">
+    <h2 class="modal-title" id="modal-set-location-title">Set Location</h2>
+  </div>
+  <div class="modal-body">
+    <div class="form-row">
+      <label class="form-label" for="set-location-path">Location</label>
+      <input class="form-input" type="text" id="set-location-path"
+             placeholder="/path/to/downloads" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="form-row">
+      <p class="form-hint" style="font-size:var(--type-caption);color:var(--color-text-secondary);margin:0">
+        Existing data will be moved to the new location.
+      </p>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-secondary btn--md" id="set-location-cancel">Cancel</button>
+    <button class="btn-primary btn--md" id="set-location-confirm">Set Location</button>
+  </div>
+</dialog>
+
+<!-- ── Rename modal ───────────────────────────────────────────────── -->
+<dialog id="modal-rename" aria-labelledby="modal-rename-title">
+  <div class="modal-header">
+    <h2 class="modal-title" id="modal-rename-title">Rename</h2>
+  </div>
+  <div class="modal-body">
+    <div class="form-row">
+      <label class="form-label" for="rename-input">Name</label>
+      <input class="form-input" type="text" id="rename-input"
+             autocomplete="off" spellcheck="false" style="width:100%">
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn-secondary btn--md" id="rename-cancel">Cancel</button>
+    <button class="btn-primary btn--md" id="rename-confirm">Rename</button>
+  </div>
+</dialog>
+
+<!-- ── Set Seed Ratio modal ───────────────────────────────────────── -->
+<dialog id="modal-seed-ratio" aria-labelledby="modal-seed-ratio-title">
+  <div class="modal-header">
+    <h2 class="modal-title" id="modal-seed-ratio-title">Set Seed Ratio</h2>
+  </div>
+  <div class="modal-body">
+
+    <!-- Ratio limit row -->
+    <div class="form-row">
+      <label class="form-label" for="seed-ratio-mode">Ratio limit</label>
+      <div class="form-select-wrap">
+        <select class="form-select" id="seed-ratio-mode">
+          <option value="global">Use global setting</option>
+          <option value="specific">Stop seeding at ratio</option>
+          <option value="forever">Seed regardless</option>
+        </select>
+        <input type="text" inputmode="decimal" class="form-input" id="seed-ratio-input"
+               placeholder="e.g. 2.0" autocomplete="off"
+               style="width:72px; display:none;">
+        <span class="form-select-hint" id="seed-ratio-global-hint"></span>
+      </div>
+    </div>
+
+    <!-- Seeding time row -->
+    <div class="form-row">
+      <label class="form-label" for="seed-time-mode">Seeding time</label>
+      <div class="form-select-wrap">
+        <select class="form-select" id="seed-time-mode">
+          <option value="-1">Use global setting</option>
+          <option value="-2">No limit</option>
+          <option value="custom">Stop after…</option>
+        </select>
+        <input type="text" inputmode="numeric" class="form-input" id="seed-time-input"
+               placeholder="minutes" autocomplete="off"
+               style="width:72px; display:none;">
+        <span class="form-select-hint" id="seed-time-global-hint"></span>
+      </div>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button class="btn-secondary btn--md" id="seed-ratio-cancel">Cancel</button>
+    <button class="btn-primary btn--md" id="seed-ratio-confirm">Apply</button>
+  </div>
+</dialog>
+
+<!-- ── Context menu ──────────────────────────────────────────────── -->
+<div id="context-menu" class="context-menu context-menu--hidden"
+     role="menu" aria-label="Torrent actions">
+  <!-- contextmenu.js populates and positions this -->
+</div>
+
+<!-- ── Toast container ───────────────────────────────────────────── -->
+<div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

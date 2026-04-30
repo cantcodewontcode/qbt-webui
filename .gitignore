@@ -1,0 +1,14 @@
+# Agent and sprint instruction files
+AGENT_*.md
+PROMPT_*.md
+NOTES_*.md
+BACKLOG.md
+
+# macOS
+.DS_Store
+
+# Reference docs (internal, not part of the UI itself)
+DESIGN_SYSTEM.md
+QBITTORRENT_API.md
+FEATURE_DELTA.md
+NGINX_UPDATE.md
