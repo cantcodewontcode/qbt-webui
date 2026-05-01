@@ -49,6 +49,10 @@ async function pollCycle() {
 
     if (data.server_state) {
       setServerState(data.server_state);
+    } else {
+      // server_state absent from delta means nothing changed — re-emit with
+      // existing state so toolbar and other listeners stay current
+      emit('serverstate:changed', state.serverState);
     }
 
     if (data.categories || data.categories_removed) {

@@ -81,11 +81,11 @@ function renderSpeed(s) {
   <div class="settings-section">
     ${settingsRow('Download limit',
       toggle('set-dl-enabled', dlEnabled) +
-      numberInput('set-dl-limit', dlEnabled ? kBsToMbps(s.dl_limit) : '') + ' Mbps'
+      numberInput('set-dl-limit', dlEnabled ? bytesToMbps(s.dl_limit) : '') + ' Mbps'
     )}
     ${settingsRow('Upload limit',
       toggle('set-ul-enabled', ulEnabled) +
-      numberInput('set-ul-limit', ulEnabled ? kBsToMbps(s.up_limit) : '') + ' Mbps'
+      numberInput('set-ul-limit', ulEnabled ? bytesToMbps(s.up_limit) : '') + ' Mbps'
     )}
     <div class="settings-group-title">Alternative speed limits</div>
     ${settingsRow('Enable alternative speeds',
@@ -93,10 +93,10 @@ function renderSpeed(s) {
     )}
     <div id="alt-speed-fields"${altOn}>
       ${settingsRow('Alternative download',
-        numberInput('set-alt-dl', kBsToMbps(s.alt_dl_limit ?? 0)) + ' Mbps'
+        numberInput('set-alt-dl', bytesToMbps(s.alt_dl_limit ?? 0)) + ' Mbps'
       )}
       ${settingsRow('Alternative upload',
-        numberInput('set-alt-ul', kBsToMbps(s.alt_up_limit ?? 0)) + ' Mbps'
+        numberInput('set-alt-ul', bytesToMbps(s.alt_up_limit ?? 0)) + ' Mbps'
       )}
       <div class="settings-group-title">Schedule</div>
       ${settingsRow('Use scheduled times',
@@ -249,22 +249,22 @@ function wireSection() {
   body.querySelector('#set-dl-enabled')?.addEventListener('change', e => {
     const enabled = e.target.checked;
     const limit   = Number(body.querySelector('#set-dl-limit')?.value ?? 0);
-    setPreferences({ dl_limit: enabled ? (mbpsToKBs(limit) || mbpsToKBs(8)) : 0 });
+    setPreferences({ dl_limit: enabled ? (mbpsToBytes(limit) || mbpsToBytes(8)) : 0 });
   });
   body.querySelector('#set-dl-limit')?.addEventListener('blur', e => {
     if (body.querySelector('#set-dl-enabled')?.checked) {
-      setPreferences({ dl_limit: mbpsToKBs(Number(e.target.value) || 0) });
+      setPreferences({ dl_limit: mbpsToBytes(Number(e.target.value) || 0) });
     }
   });
 
   body.querySelector('#set-ul-enabled')?.addEventListener('change', e => {
     const enabled = e.target.checked;
     const limit   = Number(body.querySelector('#set-ul-limit')?.value ?? 0);
-    setPreferences({ up_limit: enabled ? (mbpsToKBs(limit) || mbpsToKBs(8)) : 0 });
+    setPreferences({ up_limit: enabled ? (mbpsToBytes(limit) || mbpsToBytes(8)) : 0 });
   });
   body.querySelector('#set-ul-limit')?.addEventListener('blur', e => {
     if (body.querySelector('#set-ul-enabled')?.checked) {
-      setPreferences({ up_limit: mbpsToKBs(Number(e.target.value) || 0) });
+      setPreferences({ up_limit: mbpsToBytes(Number(e.target.value) || 0) });
     }
   });
 
@@ -278,10 +278,10 @@ function wireSection() {
   }
 
   body.querySelector('#set-alt-dl')?.addEventListener('blur', e => {
-    setPreferences({ alt_dl_limit: mbpsToKBs(Number(e.target.value) || 0) });
+    setPreferences({ alt_dl_limit: mbpsToBytes(Number(e.target.value) || 0) });
   });
   body.querySelector('#set-alt-ul')?.addEventListener('blur', e => {
-    setPreferences({ alt_up_limit: mbpsToKBs(Number(e.target.value) || 0) });
+    setPreferences({ alt_up_limit: mbpsToBytes(Number(e.target.value) || 0) });
   });
 
   const schedToggle = body.querySelector('#set-alt-sched');

@@ -17,9 +17,9 @@ function renderStateBadge(t) {
 function renderSpeedLimits(t) {
   // dl_limit: -1=global, 0=unlimited, >0=bytes/s
   const dlEnabled = (t.dl_limit ?? -1) > 0;
-  const dlMbps    = dlEnabled ? BsToMbps(t.dl_limit) : '';
+  const dlMbps    = dlEnabled ? bytesToMbps(t.dl_limit) : '';
   const ulEnabled = (t.up_limit ?? -1) > 0;
-  const ulMbps    = ulEnabled ? BsToMbps(t.up_limit) : '';
+  const ulMbps    = ulEnabled ? bytesToMbps(t.up_limit) : '';
   return `
   <div class="inspector-section-title">Speed limits</div>
   <div class="inspector-setting-row">
@@ -72,24 +72,34 @@ function wireGeneralControls(t) {
 
   dlLimited?.addEventListener('change', () => {
     dlLimit.disabled = !dlLimited.checked;
-    const bytes = dlLimited.checked ? mbpsToBs(Number(dlLimit.value) || 0) : 0;
-    torrentSetDownloadLimit([t.hash], bytes);
+    if (dlLimited.checked) {
+      const bytes = mbpsToBytes(Number(dlLimit.value) || 10);
+      if (bytes > 0) torrentSetDownloadLimit([t.hash], bytes);
+    } else {
+      torrentSetDownloadLimit([t.hash], -1);
+    }
   });
 
   dlLimit?.addEventListener('change', () => {
-    const bytes = mbpsToBs(Number(dlLimit.value));
-    if (dlLimited?.checked && bytes > 0) torrentSetDownloadLimit([t.hash], bytes);
+    if (!dlLimited?.checked) return;
+    const bytes = mbpsToBytes(Number(dlLimit.value) || 0);
+    if (bytes > 0) torrentSetDownloadLimit([t.hash], bytes);
   });
 
   ulLimited?.addEventListener('change', () => {
     ulLimit.disabled = !ulLimited.checked;
-    const bytes = ulLimited.checked ? mbpsToBs(Number(ulLimit.value) || 0) : 0;
-    torrentSetUploadLimit([t.hash], bytes);
+    if (ulLimited.checked) {
+      const bytes = mbpsToBytes(Number(ulLimit.value) || 10);
+      if (bytes > 0) torrentSetUploadLimit([t.hash], bytes);
+    } else {
+      torrentSetUploadLimit([t.hash], -1);
+    }
   });
 
   ulLimit?.addEventListener('change', () => {
-    const bytes = mbpsToBs(Number(ulLimit.value));
-    if (ulLimited?.checked && bytes > 0) torrentSetUploadLimit([t.hash], bytes);
+    if (!ulLimited?.checked) return;
+    const bytes = mbpsToBytes(Number(ulLimit.value) || 0);
+    if (bytes > 0) torrentSetUploadLimit([t.hash], bytes);
   });
 
   rMode?.addEventListener('change', () => {

@@ -47,42 +47,50 @@ async function api(path, params, timeoutMs) {
   try { return JSON.parse(text); } catch { return text; }
 }
 
-async function torrentPause(hashes)      { return api('/torrents/pause',     { body: 'hashes=' + hashes.join('|') }); }
-async function torrentResume(hashes)     { return api('/torrents/resume',    { body: 'hashes=' + hashes.join('|') }); }
-async function torrentRecheck(hashes)    { return api('/torrents/recheck',   { body: 'hashes=' + hashes.join('|') }); }
-async function torrentReannounce(hashes) { return api('/torrents/reannounce',{ body: 'hashes=' + hashes.join('|') }); }
+function safeHashes(hashes) {
+  const valid = (hashes || []).filter(h => h && typeof h === 'string' && h.length > 0);
+  if (valid.length === 0) throw new Error('No valid torrent hashes provided');
+  return valid.join('|');
+}
+
+async function torrentPause(hashes)      { return api('/torrents/pause',     { body: 'hashes=' + safeHashes(hashes) }); }
+async function torrentResume(hashes)     { return api('/torrents/resume',    { body: 'hashes=' + safeHashes(hashes) }); }
+async function torrentRecheck(hashes)    { return api('/torrents/recheck',   { body: 'hashes=' + safeHashes(hashes) }); }
+async function torrentReannounce(hashes) { return api('/torrents/reannounce',{ body: 'hashes=' + safeHashes(hashes) }); }
 
 async function torrentDelete(hashes, deleteFiles) {
-  return api('/torrents/delete', { body: `hashes=${hashes.join('|')}&deleteFiles=${deleteFiles ? 'true' : 'false'}` });
+  return api('/torrents/delete', { body: `hashes=${safeHashes(hashes)}&deleteFiles=${deleteFiles ? 'true' : 'false'}` });
 }
 
 async function torrentSetLocation(hashes, location) {
-  return api('/torrents/setLocation', { body: `hashes=${hashes.join('|')}&location=${encodeURIComponent(location)}` });
+  return api('/torrents/setLocation', { body: `hashes=${safeHashes(hashes)}&location=${encodeURIComponent(location)}` });
 }
 
 async function torrentRename(hash, name) {
+  if (!hash) throw new Error('No valid torrent hash provided');
   return api('/torrents/rename', { body: `hash=${hash}&name=${encodeURIComponent(name)}` });
 }
 
-async function torrentSetShareLimits(hashes, ratioLimit, seedingTimeLimit) {
+async function torrentSetShareLimits(hashes, ratioLimit, seedingTimeLimit, inactiveSeedingTimeLimit) {
   return api('/torrents/setShareLimits', {
-    body: `hashes=${hashes.join('|')}&ratioLimit=${ratioLimit}&seedingTimeLimit=${seedingTimeLimit ?? -1}`,
+    body: `hashes=${safeHashes(hashes)}&ratioLimit=${ratioLimit}&seedingTimeLimit=${seedingTimeLimit ?? -2}&inactiveSeedingTimeLimit=${inactiveSeedingTimeLimit ?? -2}`,
   });
 }
 
 async function torrentSetUploadLimit(hashes, limit) {
-  return api('/torrents/setUploadLimit', { body: `hashes=${hashes.join('|')}&limit=${limit}` });
+  return api('/torrents/setUploadLimit', { body: `hashes=${safeHashes(hashes)}&limit=${limit}` });
 }
 
 async function torrentSetDownloadLimit(hashes, limit) {
-  return api('/torrents/setDownloadLimit', { body: `hashes=${hashes.join('|')}&limit=${limit}` });
+  return api('/torrents/setDownloadLimit', { body: `hashes=${safeHashes(hashes)}&limit=${limit}` });
 }
 
 async function torrentSetForceStart(hashes, value) {
-  return api('/torrents/setForceStart', { body: `hashes=${hashes.join('|')}&value=${value}` });
+  return api('/torrents/setForceStart', { body: `hashes=${safeHashes(hashes)}&value=${value}` });
 }
 
 async function torrentFilePriority(hash, indexes, priority) {
+  if (!hash) throw new Error('No valid torrent hash provided');
   return api('/torrents/filePrio', { body: `hash=${hash}&id=${indexes.join('|')}&priority=${priority}` });
 }
 
@@ -98,10 +106,10 @@ async function torrentAdd(params) {
   return resp.text();
 }
 
-async function queueMoveTop(hashes)    { return api('/torrents/topPrio',      { body: 'hashes=' + hashes.join('|') }); }
-async function queueMoveUp(hashes)     { return api('/torrents/increasePrio', { body: 'hashes=' + hashes.join('|') }); }
-async function queueMoveDown(hashes)   { return api('/torrents/decreasePrio', { body: 'hashes=' + hashes.join('|') }); }
-async function queueMoveBottom(hashes) { return api('/torrents/bottomPrio',   { body: 'hashes=' + hashes.join('|') }); }
+async function queueMoveTop(hashes)    { return api('/torrents/topPrio',      { body: 'hashes=' + safeHashes(hashes) }); }
+async function queueMoveUp(hashes)     { return api('/torrents/increasePrio', { body: 'hashes=' + safeHashes(hashes) }); }
+async function queueMoveDown(hashes)   { return api('/torrents/decreasePrio', { body: 'hashes=' + safeHashes(hashes) }); }
+async function queueMoveBottom(hashes) { return api('/torrents/bottomPrio',   { body: 'hashes=' + safeHashes(hashes) }); }
 
 async function getPreferences()  { return api('/app/preferences'); }
 async function setPreferences(prefs) {
@@ -115,7 +123,7 @@ async function getTorrentFiles(hash)      { return api('/torrents/files',      {
 async function getTorrentPeers(hash, rid) { return api('/sync/torrentPeers',  { hash, rid: rid ?? 0 }); }
 
 async function torrentSetSuperSeeding(hashes, value) {
-  return api('/torrents/setSuperSeeding', { body: `hashes=${hashes.join('|')}&value=${value}` });
+  return api('/torrents/setSuperSeeding', { body: `hashes=${safeHashes(hashes)}&value=${value}` });
 }
 
 async function getLog(normal, info, warning, critical) {

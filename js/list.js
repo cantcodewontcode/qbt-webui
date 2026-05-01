@@ -9,10 +9,30 @@ const FILTER_MAP = {
   all:         () => true,
   downloading: t => ['downloading', 'stalledDL', 'forcedDL', 'allocating'].includes(t.state),
   seeding:     t => ['uploading', 'stalledUP', 'forcedUP'].includes(t.state),
-  paused:      t => t.state === 'pausedDL' || t.state === 'pausedUP',
+  paused:      t => {
+    if (t.state !== 'pausedDL' && t.state !== 'pausedUP') return false;
+    if (t.state === 'pausedDL') return true;
+    // pausedUP — only show as Paused if it hasn't met its goal
+    if ((t.progress ?? 0) < 1) return true;
+    const ratioMet = (t.ratio_limit ?? -1) >= 0 && (t.ratio ?? 0) >= t.ratio_limit;
+    const stlimit  = t.seeding_time_limit ?? -1;
+    const timeMet  = stlimit >= 0 && (t.seeding_time ?? 0) >= stlimit;
+    if (stlimit === -2) return !ratioMet; // seed forever by time — only ratio can finish it
+    return !ratioMet && !timeMet;
+  },
   errors:      t => t.state === 'error' || t.state === 'missingFiles',
   fetching:    t => t.state === 'metaDL',
-  finished:    t => t.state === 'pausedUP',
+  finished:    t => {
+    if (t.state !== 'pausedUP') return false;
+    if ((t.progress ?? 0) < 1) return false;
+    // ratio_limit === -2 means "seed forever" — never finished
+    // ratio_limit === -1 means "use global" — not handled here, treated as not finished
+    const ratioMet = (t.ratio_limit ?? -1) >= 0 && (t.ratio ?? 0) >= t.ratio_limit;
+    const timeMet  = (t.seeding_time_limit ?? -1) >= 0 && (t.seeding_time ?? 0) >= t.seeding_time_limit;
+    // seeding_time_limit === -2 means "no limit" — not finished by time
+    if ((t.seeding_time_limit ?? -1) === -2) return ratioMet;
+    return ratioMet || timeMet;
+  },
   checking:    t => ['checkingDL', 'checkingUP', 'checkingResumeData'].includes(t.state),
   active:      t => (t.dlspeed ?? 0) > 0 || (t.upspeed ?? 0) > 0,
   inactive:    t => (t.dlspeed ?? 0) === 0 && (t.upspeed ?? 0) === 0,

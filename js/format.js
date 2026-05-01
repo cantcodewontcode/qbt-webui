@@ -63,10 +63,11 @@ function formatPercent(fraction) {
   return (fraction * 100).toFixed(1).replace('.0', '') + '%';
 }
 
-function kBsToMbps(kBs)   { return kBs  > 0 ? +((kBs  / 125).toFixed(1))    : 0; }
-function mbpsToKBs(mbps)  { return Math.round(mbps * 125); }
-function BsToMbps(Bs)     { return Bs   > 0 ? +((Bs   / 125000).toFixed(1))  : 0; }
-function mbpsToBs(mbps)   { return Math.round(mbps * 125000); }
+// qBittorrent API speed limits are in bytes/s throughout (global prefs + per-torrent)
+// 1 Mbps = 125,000 bytes/s
+function bytesToMbps(Bs)   { return Bs   > 0 ? +((Bs / 125000).toFixed(2)) : 0; }
+function mbpsToBytes(mbps) { return Math.round(mbps * 125000); }
+
 
 function torrentStateClass(torrent) {
   if (torrent.error === true || torrent.state === 'error') {

@@ -58,10 +58,10 @@ function mountSpeedReadouts() {
   });
 
   document.getElementById('speed-down').addEventListener('click', function () {
-    openSpeedPopover(this);
+    openSpeedPopover(this, 'dl');
   });
   document.getElementById('speed-up').addEventListener('click', function () {
-    openSpeedPopover(this);
+    openSpeedPopover(this, 'ul');
   });
 
   document.getElementById('btn-alt-speed-indicator')?.addEventListener('click', function () {
@@ -69,12 +69,12 @@ function mountSpeedReadouts() {
   });
 }
 
-function openSpeedPopover(anchorEl) {
+function openSpeedPopover(anchorEl, mode) {
   const wasSameAnchor = _popoverAnchor === anchorEl;
   if (_popoverCleanup) { _popoverCleanup(); }
   if (wasSameAnchor) return;
 
-  const popover = buildPopover();
+  const popover = buildLimitPopover(mode || 'dl');
   document.body.appendChild(popover);
 
   const rect = anchorEl.getBoundingClientRect();
@@ -118,99 +118,32 @@ function openSpeedPopover(anchorEl) {
   }, 0);
 }
 
-function buildPopover() {
-  const p = state.prefs;
-  const dlEnabled  = (p.dl_limit  ?? 0) > 0;
-  const ulEnabled  = (p.up_limit  ?? 0) > 0;
-  const altEnabled = !!(p.alt_speed_enabled);
-  const schedEnabled = !!(p.scheduler_enabled);
-
-  const fromH = String(p.schedule_from_hour ?? 9).padStart(2, '0');
-  const fromM = String(p.schedule_from_min  ?? 0).padStart(2, '0');
-  const toH   = String(p.schedule_to_hour   ?? 17).padStart(2, '0');
-  const toM   = String(p.schedule_to_min    ?? 0).padStart(2, '0');
-
-  const days = ['Su','Mo','Tu','We','Th','Fr','Sa'];
-  const dayMask = p.scheduler_days || 0;
-  const dayCheckboxes = days.map((d, i) => {
-    const bit = 1 << i;
-    return `<label class="sp-day"><input type="checkbox" class="sp-day-cb" data-bit="${bit}"${(dayMask & bit) ? ' checked' : ''}> ${d}</label>`;
-  }).join('');
+function buildLimitPopover(mode) {
+  const p        = state.prefs;
+  const isDownload = mode === 'dl';
+  const enabled  = isDownload ? ((p.dl_limit ?? 0) > 0) : ((p.up_limit ?? 0) > 0);
+  const current  = isDownload ? bytesToMbps(p.dl_limit ?? 0) : bytesToMbps(p.up_limit ?? 0);
+  const label    = isDownload ? 'Download limit' : 'Upload limit';
+  const onId     = `sp-${mode}-on`;
+  const valId    = `sp-${mode}-val`;
+  const subId    = `sp-${mode}-sub`;
+  const prefKey  = isDownload ? 'dl_limit' : 'up_limit';
 
   const pop = document.createElement('div');
   pop.className = 'speed-popover';
   pop.innerHTML = `
     <div class="speed-popover__caret" aria-hidden="true"></div>
-
     <div class="sp-section">
-      <div class="sp-row">
-        <label class="sp-label">Download limit</label>
-        <label class="toggle sp-toggle" aria-label="Enable download limit">
-          <input type="checkbox" id="sp-dl-on"${dlEnabled ? ' checked' : ''}>
+      <div class="sp-inline-row">
+        <label class="toggle sp-toggle" aria-label="Enable ${label.toLowerCase()}">
+          <input type="checkbox" id="${onId}"${enabled ? ' checked' : ''}>
           <span class="toggle-track"></span>
         </label>
-      </div>
-      <div class="sp-sub" id="sp-dl-sub"${!dlEnabled ? ' hidden' : ''}>
-        <input type="number" class="input sp-input" id="sp-dl-val"
-               value="${dlEnabled ? kBsToMbps(p.dl_limit) : 10}" min="0" step="0.1">
-        <span class="sp-unit">Mbps</span>
-      </div>
-    </div>
-
-    <div class="sp-section">
-      <div class="sp-row">
-        <label class="sp-label">Upload limit</label>
-        <label class="toggle sp-toggle" aria-label="Enable upload limit">
-          <input type="checkbox" id="sp-ul-on"${ulEnabled ? ' checked' : ''}>
-          <span class="toggle-track"></span>
-        </label>
-      </div>
-      <div class="sp-sub" id="sp-ul-sub"${!ulEnabled ? ' hidden' : ''}>
-        <input type="number" class="input sp-input" id="sp-ul-val"
-               value="${ulEnabled ? kBsToMbps(p.up_limit) : 10}" min="0" step="0.1">
-        <span class="sp-unit">Mbps</span>
-      </div>
-    </div>
-
-    <div class="sp-section">
-      <div class="sp-row">
-        <label class="sp-label">Alternative speeds</label>
-        <label class="toggle sp-toggle" aria-label="Enable alternative speeds">
-          <input type="checkbox" id="sp-alt-on"${altEnabled ? ' checked' : ''}>
-          <span class="toggle-track"></span>
-        </label>
-      </div>
-      <div class="sp-sub" id="sp-alt-sub"${!altEnabled ? ' hidden' : ''}>
-        <div class="sp-alt-row">
-          <span class="sp-alt-label">↓</span>
-          <input type="number" class="input sp-input" id="sp-alt-dl"
-                 value="${kBsToMbps(p.alt_dl_limit ?? 0)}" min="0" step="0.1">
+        <label class="sp-label">${label}</label>
+        <div class="sp-inline-sub" id="${subId}"${!enabled ? ' hidden' : ''}>
+          <input type="number" class="input sp-input" id="${valId}"
+                 value="${enabled ? current : 10}" min="0.1" step="0.1">
           <span class="sp-unit">Mbps</span>
-        </div>
-        <div class="sp-alt-row">
-          <span class="sp-alt-label">↑</span>
-          <input type="number" class="input sp-input" id="sp-alt-ul"
-                 value="${kBsToMbps(p.alt_up_limit ?? 0)}" min="0" step="0.1">
-          <span class="sp-unit">Mbps</span>
-        </div>
-        <div class="sp-divider"></div>
-        <div class="sp-row">
-          <label class="sp-label sp-label--sm">Schedule</label>
-          <label class="toggle sp-toggle sp-toggle--sm" aria-label="Enable schedule">
-            <input type="checkbox" id="sp-sched-on"${schedEnabled ? ' checked' : ''}>
-            <span class="toggle-track toggle-track--sm"></span>
-          </label>
-        </div>
-        <div class="sp-sub" id="sp-sched-sub"${!schedEnabled ? ' hidden' : ''}>
-          <div class="sp-days">${dayCheckboxes}</div>
-          <div class="sp-time-row">
-            <span class="sp-alt-label">From</span>
-            <input type="time" class="input sp-time" id="sp-sched-from" value="${fromH}:${fromM}">
-          </div>
-          <div class="sp-time-row">
-            <span class="sp-alt-label">To</span>
-            <input type="time" class="input sp-time" id="sp-sched-to" value="${toH}:${toM}">
-          </div>
         </div>
       </div>
     </div>
@@ -221,77 +154,30 @@ function buildPopover() {
       await setPreferences(payload);
       const fresh = await getPreferences();
       setPrefs(fresh);
+      // Re-emit serverstate:changed so toolbar readout updates immediately
+      emit('serverstate:changed', state.serverState);
     } catch (err) {
       showToast('Failed to save: ' + err.message, 'error');
     }
   }
 
-  pop.querySelector('#sp-dl-on').addEventListener('change', async e => {
-    const on = e.target.checked;
-    const sub = pop.querySelector('#sp-dl-sub');
+  pop.querySelector(`#${onId}`).addEventListener('change', async e => {
+    const on  = e.target.checked;
+    const sub = pop.querySelector(`#${subId}`);
     sub.hidden = !on;
-    const val = parseFloat(pop.querySelector('#sp-dl-val').value) || 10;
-    await save({ dl_limit: on ? (mbpsToKBs(val) || mbpsToKBs(10)) : 0 });
+    if (on) {
+      const val = parseFloat(pop.querySelector(`#${valId}`).value) || 10;
+      await save({ [prefKey]: mbpsToBytes(val) || mbpsToBytes(10) });
+      setTimeout(() => pop.querySelector(`#${valId}`)?.select(), 50);
+    } else {
+      await save({ [prefKey]: 0 });
+    }
   });
 
-  pop.querySelector('#sp-dl-val').addEventListener('change', async e => {
-    if (!pop.querySelector('#sp-dl-on').checked) return;
+  pop.querySelector(`#${valId}`).addEventListener('change', async e => {
+    if (!pop.querySelector(`#${onId}`).checked) return;
     const val = parseFloat(e.target.value) || 0;
-    await save({ dl_limit: mbpsToKBs(val) });
-  });
-
-  pop.querySelector('#sp-ul-on').addEventListener('change', async e => {
-    const on = e.target.checked;
-    const sub = pop.querySelector('#sp-ul-sub');
-    sub.hidden = !on;
-    const val = parseFloat(pop.querySelector('#sp-ul-val').value) || 10;
-    await save({ up_limit: on ? (mbpsToKBs(val) || mbpsToKBs(10)) : 0 });
-  });
-
-  pop.querySelector('#sp-ul-val').addEventListener('change', async e => {
-    if (!pop.querySelector('#sp-ul-on').checked) return;
-    const val = parseFloat(e.target.value) || 0;
-    await save({ up_limit: mbpsToKBs(val) });
-  });
-
-  pop.querySelector('#sp-alt-on').addEventListener('change', async e => {
-    const on = e.target.checked;
-    pop.querySelector('#sp-alt-sub').hidden = !on;
-    await save({ alt_speed_enabled: on });
-  });
-
-  pop.querySelector('#sp-alt-dl').addEventListener('change', async e => {
-    await save({ alt_dl_limit: mbpsToKBs(parseFloat(e.target.value) || 0) });
-  });
-
-  pop.querySelector('#sp-alt-ul').addEventListener('change', async e => {
-    await save({ alt_up_limit: mbpsToKBs(parseFloat(e.target.value) || 0) });
-  });
-
-  pop.querySelector('#sp-sched-on').addEventListener('change', async e => {
-    const on = e.target.checked;
-    pop.querySelector('#sp-sched-sub').hidden = !on;
-    await save({ scheduler_enabled: on });
-  });
-
-  pop.querySelectorAll('.sp-day-cb').forEach(cb => {
-    cb.addEventListener('change', async () => {
-      let mask = 0;
-      pop.querySelectorAll('.sp-day-cb').forEach(c => {
-        if (c.checked) mask |= Number(c.dataset.bit);
-      });
-      await save({ scheduler_days: mask });
-    });
-  });
-
-  pop.querySelector('#sp-sched-from').addEventListener('change', async e => {
-    const [h, m] = e.target.value.split(':').map(Number);
-    await save({ schedule_from_hour: h || 0, schedule_from_min: m || 0 });
-  });
-
-  pop.querySelector('#sp-sched-to').addEventListener('change', async e => {
-    const [h, m] = e.target.value.split(':').map(Number);
-    await save({ schedule_to_hour: h || 0, schedule_to_min: m || 0 });
+    if (val > 0) await save({ [prefKey]: mbpsToBytes(val) });
   });
 
   return pop;

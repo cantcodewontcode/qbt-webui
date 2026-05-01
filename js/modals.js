@@ -337,39 +337,86 @@ function mountSeedRatioModal() {
   document.addEventListener('modal:seed-ratio', e => {
     const { ids, torrent } = e.detail;
 
-    const ratioLimit = torrent?.ratio_limit ?? -1;
-    let mode = 'global';
-    if (ratioLimit === -2) mode = 'forever';
-    else if (ratioLimit >= 0) mode = 'specific';
-
-    if (modeEl)  modeEl.value  = mode;
-    if (inputEl) inputEl.value = ratioLimit >= 0 ? ratioLimit.toFixed(2) : '2.00';
-    updateLimitRowVisibility();
-
-    const seedingTimeLimit = torrent?.seeding_time_limit ?? -1;
-    const timeModeElNow = document.getElementById('seed-time-mode');
-    const timeInputElNow = document.getElementById('seed-time-input');
-    if (timeModeElNow) {
-      if (seedingTimeLimit === -2) {
-        timeModeElNow.value = '-2';
-      } else if (seedingTimeLimit >= 0) {
-        timeModeElNow.value = 'custom';
-        if (timeInputElNow) timeInputElNow.value = seedingTimeLimit;
+    function setMixedOption(selEl, useMixed) {
+      let opt = selEl.querySelector('option[value="mixed"]');
+      if (useMixed) {
+        if (!opt) {
+          opt = document.createElement('option');
+          opt.value = 'mixed';
+          opt.textContent = 'Mixed';
+          opt.hidden = true;
+          opt.disabled = true;
+          selEl.insertBefore(opt, selEl.firstChild);
+        }
+        selEl.value = 'mixed';
+        selEl.classList.add('is-mixed');
       } else {
-        timeModeElNow.value = '-1';
+        if (opt) opt.remove();
+        selEl.classList.remove('is-mixed');
       }
-      if (timeInputElNow) timeInputElNow.style.display = timeModeElNow.value === 'custom' ? 'block' : 'none';
     }
 
-    modal._pendingIds = ids;
+    const torrents = ids.map(h => state.torrents.get(h)).filter(Boolean);
+
+    function ratioModeOf(t) {
+      const rl = t.ratio_limit ?? -1;
+      if (rl === -2) return 'forever';
+      if (rl >= 0)  return 'specific';
+      return 'global';
+    }
+    function timeModeOf(t) {
+      const tl = t.seeding_time_limit ?? -1;
+      if (tl === -2) return '-2';
+      if (tl >= 0)  return 'custom';
+      return '-1';
+    }
+
+    const ratioModes = [...new Set(torrents.map(ratioModeOf))];
+    const timeModes  = [...new Set(torrents.map(timeModeOf))];
+    const ratioMixed = ratioModes.length > 1;
+    const timeMixed  = timeModes.length > 1;
+
+    const timeModeElNow  = document.getElementById('seed-time-mode');
+    const timeInputElNow = document.getElementById('seed-time-input');
+
+    setMixedOption(modeEl, ratioMixed);
+    if (!ratioMixed) {
+      const mode = ratioModes[0] || 'global';
+      modeEl.value = mode;
+      const refTorrent = torrent || torrents[0];
+      const rl = refTorrent?.ratio_limit ?? -1;
+      if (inputEl) inputEl.value = rl >= 0 ? rl.toFixed(2) : '2.00';
+    }
+    updateLimitRowVisibility();
+
+    if (timeModeElNow) {
+      setMixedOption(timeModeElNow, timeMixed);
+      if (!timeMixed) {
+        const tm = timeModes[0] || '-1';
+        timeModeElNow.value = tm;
+        if (tm === 'custom') {
+          const refTorrent = torrent || torrents[0];
+          const tl = refTorrent?.seeding_time_limit ?? 0;
+          if (timeInputElNow) timeInputElNow.value = tl >= 0 ? tl : 0;
+        }
+      }
+      if (timeInputElNow) {
+        timeInputElNow.style.display = timeModeElNow.value === 'custom' ? 'block' : 'none';
+      }
+    }
+
+    modal._pendingIds    = ids;
+    modal._ratioWasMixed = ratioMixed;
+    modal._timeWasMixed  = timeMixed;
     modal.showModal();
     updateSeedRatioHints();
-    if (mode === 'specific') {
+    if (!ratioMixed && modeEl.value === 'specific') {
       setTimeout(() => { inputEl?.select(); }, 50);
     }
   });
 
   modeEl?.addEventListener('change', () => {
+    if (modeEl.value !== 'mixed') modeEl.classList.remove('is-mixed');
     updateLimitRowVisibility();
     updateSeedRatioHints();
   });
@@ -384,6 +431,7 @@ function mountSeedRatioModal() {
     if (timeInputEl) timeInputEl.style.display = timeModeEl?.value === 'custom' ? 'block' : 'none';
   }
   timeModeEl?.addEventListener('change', () => {
+    if (timeModeEl.value !== 'mixed') timeModeEl.classList.remove('is-mixed');
     updateTimeLimitRowVisibility();
     updateSeedRatioHints();
   });
@@ -393,8 +441,18 @@ function mountSeedRatioModal() {
     const hashes = modal._pendingIds.slice();
     modal.close();
 
+    const ratioStillMixed = (mode === 'mixed');
+    const timeStillMixed  = (timeModeEl?.value === 'mixed');
+
+    if (ratioStillMixed && timeStillMixed) {
+      showToast('No changes to apply', 'info');
+      return;
+    }
+
     let ratioLimit;
-    if (mode === 'global') {
+    if (ratioStillMixed) {
+      ratioLimit = null;
+    } else if (mode === 'global') {
       ratioLimit = -1;
     } else if (mode === 'forever') {
       ratioLimit = -2;
@@ -408,17 +466,30 @@ function mountSeedRatioModal() {
       ratioLimit = ratio;
     }
 
-    let seedingTimeLimit = -1;
+    let seedingTimeLimit;
     const timeMode = timeModeEl?.value ?? '-1';
-    if (timeMode === '-2') {
+    if (timeStillMixed) {
+      seedingTimeLimit = null;
+    } else if (timeMode === '-2') {
       seedingTimeLimit = -2;
     } else if (timeMode === 'custom') {
       const mins = parseInt(timeInputEl?.value ?? '', 10);
-      if (!isNaN(mins) && mins >= 0) seedingTimeLimit = mins;
+      seedingTimeLimit = (!isNaN(mins) && mins >= 0) ? mins : -1;
+    } else {
+      seedingTimeLimit = -1;
     }
 
     try {
-      await torrentSetShareLimits(hashes, ratioLimit, seedingTimeLimit);
+      if (ratioLimit === null || seedingTimeLimit === null) {
+        await Promise.all(hashes.map(hash => {
+          const t  = state.torrents.get(hash);
+          const rl = ratioLimit       !== null ? ratioLimit       : (t?.ratio_limit ?? -1);
+          const tl = seedingTimeLimit !== null ? seedingTimeLimit : (t?.seeding_time_limit ?? -1);
+          return torrentSetShareLimits([hash], rl, tl);
+        }));
+      } else {
+        await torrentSetShareLimits(hashes, ratioLimit, seedingTimeLimit);
+      }
       await forceRefresh();
       const count = hashes.length;
       showToast(

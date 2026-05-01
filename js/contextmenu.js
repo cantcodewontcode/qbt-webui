@@ -151,24 +151,21 @@ function menuItemSubmenu(action, iconHtml, label) {
 const SEP = '<div class="context-menu__separator" role="separator"></div>';
 
 function buildMenuHTML(isMulti, torrent) {
-  const renameClass  = isMulti ? 'context-menu__item--disabled' : '';
   const queueEnabled = !!(state.prefs.queueing_enabled);
   const isPausedState = s => s === 'pausedDL' || s === 'pausedUP' ||
                              s === 'queuedDL' || s === 'queuedUP';
 
-  let showStart, showForceStart, showPause;
+  let showStart, showPause;
   if (!isMulti) {
     const paused = torrent && isPausedState(torrent.state);
-    showStart      = paused;
-    showForceStart = paused;
-    showPause      = !paused;
+    showStart = paused;
+    showPause = !paused;
   } else {
     const sel = [...state.selected].map(h => state.torrents.get(h)).filter(Boolean);
-    const allPaused = sel.every(t => isPausedState(t.state));
+    const allPaused = sel.every(t =>  isPausedState(t.state));
     const allActive = sel.every(t => !isPausedState(t.state));
-    showStart      = !allActive;
-    showForceStart = !allActive;
-    showPause      = !allPaused;
+    showStart = !allActive;   // show if any are paused (all paused or mixed)
+    showPause = !allPaused;   // show if any are active (all active or mixed)
   }
 
   const seedingStates = new Set(['uploading', 'forcedUP', 'stalledUP', 'pausedUP']);
@@ -181,21 +178,20 @@ function buildMenuHTML(isMulti, torrent) {
 
   let superSeedingItems = '';
   if (anySeeding) {
-    if (allSuperSeeding || mixedSuperSeeding) {
-      superSeedingItems += menuItem('super-seeding-stop',  iconSuperSeeding(14), 'Stop Super Seeding');
-    }
     if (noneSuperSeeding || mixedSuperSeeding) {
-      superSeedingItems += menuItem('super-seeding-start', iconSuperSeeding(14), 'Start Super Seeding');
+      superSeedingItems += menuItem('super-seeding-start', iconSuperSeeding(14),     'Start Super Seeding');
+    }
+    if (allSuperSeeding || mixedSuperSeeding) {
+      superSeedingItems += menuItem('super-seeding-stop',  iconSuperSeedingStop(14), 'Stop Super Seeding');
     }
   }
 
   return [
-    showStart      ? menuItem('start',       iconPlay(14),     'Start / Resume') : '',
-    showForceStart ? menuItem('force-start',  iconPlay(14),     'Force Start')    : '',
-    showPause      ? menuItem('pause',        iconPause(14),    'Pause')          : '',
+    showStart ? menuItem('start', iconPlay(14), 'Start / Resume') : '',
+    showPause ? menuItem('pause', iconPause(14), 'Pause')         : '',
     SEP,
-    menuItem('show-details', iconInfo(14), 'Show Details'),
-    SEP,
+    !isMulti ? menuItem('show-details', iconInfo(14), 'Show Details') : '',
+    !isMulti ? SEP : '',
     menuItem('verify',     iconRefreshCw(14),  'Verify Local Data'),
     menuItem('reannounce', iconWifi(14),        'Reannounce'),
     superSeedingItems,
@@ -209,7 +205,7 @@ function buildMenuHTML(isMulti, torrent) {
     menuItem('seed-ratio',  iconInfo(14),        'Set Seed Ratio\u2026'),
     SEP,
     menuItem('set-location', iconFolderOpen(14), 'Set Location\u2026'),
-    menuItem('rename',      iconEdit2(14),       'Rename\u2026', renameClass),
+    !isMulti ? menuItem('rename', iconEdit2(14), 'Rename\u2026') : '',
     SEP,
     menuItem('remove',      iconTrash2(14),      'Remove Torrent'),
   ].join('');
@@ -299,26 +295,29 @@ function handleAction(action, itemEl, id, selectedIds, torrent, isMulti) {
     case 'start':
       selectedIds.forEach(hash => {
         const t = state.torrents.get(hash);
-        if (t) applyTorrentDelta({ [hash]: { state: 'downloading' } });
-      });
-      runAction(() => torrentResume(selectedIds));
-      break;
-    case 'pause':
-      selectedIds.forEach(hash => {
-        const t = state.torrents.get(hash);
-        if (t) applyTorrentDelta({ [hash]: { state: 'pausedDL', dlspeed: 0, upspeed: 0 } });
-      });
-      runAction(() => torrentPause(selectedIds));
-      break;
-    case 'force-start':
-      selectedIds.forEach(hash => {
-        const t = state.torrents.get(hash);
-        if (t) applyTorrentDelta({ [hash]: { state: 'forcedDL', force_start: true } });
+        if (!t) return;
+        const checkingStates = ['checkingDL', 'checkingUP', 'checkingResumeData', 'moving'];
+        if (checkingStates.includes(t.state)) return;
+        // Resuming a paused seeder should show as seeding, not downloading
+        const optimisticState = t.state === 'pausedUP' ? 'uploading' : 'forcedDL';
+        applyTorrentDelta({ [hash]: { state: optimisticState, force_start: true } });
       });
       runAction(async () => {
         await torrentSetForceStart(selectedIds, true);
         await torrentResume(selectedIds);
       });
+      break;
+    case 'pause':
+      selectedIds.forEach(hash => {
+        const t = state.torrents.get(hash);
+        if (!t) return;
+        const checkingStates = ['checkingDL', 'checkingUP', 'checkingResumeData', 'moving'];
+        if (checkingStates.includes(t.state)) return;
+        const seedingStates = ['uploading', 'forcedUP', 'stalledUP', 'pausedUP'];
+        const optimisticState = seedingStates.includes(t.state) ? 'pausedUP' : 'pausedDL';
+        applyTorrentDelta({ [hash]: { state: optimisticState, dlspeed: 0, upspeed: 0 } });
+      });
+      runAction(() => torrentPause(selectedIds));
       break;
     case 'super-seeding-start':
       runAction(() => torrentSetSuperSeeding(selectedIds, true));
@@ -382,4 +381,3 @@ function handleAction(action, itemEl, id, selectedIds, torrent, isMulti) {
       break;
   }
 }
-

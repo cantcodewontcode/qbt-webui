@@ -1055,6 +1055,13 @@ select.input:disabled,
   cursor: not-allowed;
 }
 
+.form-select.is-mixed,
+select.input.is-mixed,
+.insp-select.is-mixed {
+  font-style: italic;
+  color: var(--color-text-secondary);
+}
+
 /* ── Select wrap with inline hint ─────────────────────────────────── */
 .form-select-wrap {
   display: flex;
@@ -1863,7 +1870,7 @@ dialog[open] {
 .speed-popover {
   position: fixed;  /* creates positioning context for caret */
   z-index: var(--z-modal);
-  width: 300px;
+  width: 260px;
   background: var(--color-bg-overlay);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -1996,6 +2003,24 @@ dialog[open] {
   border-left: 2px solid var(--color-border-subtle);
 }
 .sp-sub[hidden] {
+  display: none;
+}
+
+.sp-inline-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.sp-inline-sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.sp-inline-sub[hidden] {
   display: none;
 }
 
