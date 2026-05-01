@@ -34,6 +34,7 @@ function mountFilterTabs() {
           tabEl.hidden = count === 0;
           if (count === 0 && tabEl.classList.contains('filter-tab--active')) {
             setFilter('all');
+            state.activeCategory = null;
           }
         }
       }

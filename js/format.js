@@ -63,14 +63,17 @@ function formatPercent(fraction) {
   return (fraction * 100).toFixed(1).replace('.0', '') + '%';
 }
 
-function kbpsToMbps(kbps) { return kbps > 0 ? +((kbps / 125).toFixed(1)) : 0; }
-function mbpsToKbps(mbps)  { return Math.round(mbps * 125); }
-function bpsToMbps(bps)    { return bps  > 0 ? +((bps  / 125000).toFixed(1)) : 0; }
-function mbpsToBps(mbps)   { return Math.round(mbps * 125000); }
+function kBsToMbps(kBs)   { return kBs  > 0 ? +((kBs  / 125).toFixed(1))    : 0; }
+function mbpsToKBs(mbps)  { return Math.round(mbps * 125); }
+function BsToMbps(Bs)     { return Bs   > 0 ? +((Bs   / 125000).toFixed(1))  : 0; }
+function mbpsToBs(mbps)   { return Math.round(mbps * 125000); }
 
 function torrentStateClass(torrent) {
-  if (torrent.error === true || torrent.state === 'error' || torrent.state === 'missingFiles') {
+  if (torrent.error === true || torrent.state === 'error') {
     return 'state-error';
+  }
+  if (torrent.state === 'missingFiles') {
+    return 'state-missing';
   }
   switch (torrent.state) {
     case 'downloading':
@@ -95,8 +98,9 @@ function torrentStateClass(torrent) {
       return 'state-queued';
     case 'uploading':
     case 'forcedUP':
-    case 'stalledUP':
       return 'state-seeding';
+    case 'stalledUP':
+      return 'state-seeding-stalled';
     default:
       return 'state-paused';
   }
@@ -106,6 +110,7 @@ function torrentStateLabel(torrent) {
   const cls = torrentStateClass(torrent);
   switch (cls) {
     case 'state-error':       return 'Error';
+    case 'state-missing':     return 'Missing files';
     case 'state-metadata':    return 'Getting metadata';
     case 'state-checking':    return 'Checking';
     case 'state-stalled':     return 'Stalled';
@@ -113,7 +118,8 @@ function torrentStateLabel(torrent) {
     case 'state-finished':    return 'Finished';
     case 'state-queued':      return 'Queued';
     case 'state-downloading': return 'Downloading';
-    case 'state-seeding':     return 'Seeding';
+    case 'state-seeding':         return 'Seeding';
+    case 'state-seeding-stalled': return 'Stalled';
     default:                  return 'Unknown';
   }
 }

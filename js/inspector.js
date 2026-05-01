@@ -17,9 +17,9 @@ function renderStateBadge(t) {
 function renderSpeedLimits(t) {
   // dl_limit: -1=global, 0=unlimited, >0=bytes/s
   const dlEnabled = (t.dl_limit ?? -1) > 0;
-  const dlMbps    = dlEnabled ? bpsToMbps(t.dl_limit) : '';
+  const dlMbps    = dlEnabled ? BsToMbps(t.dl_limit) : '';
   const ulEnabled = (t.up_limit ?? -1) > 0;
-  const ulMbps    = ulEnabled ? bpsToMbps(t.up_limit) : '';
+  const ulMbps    = ulEnabled ? BsToMbps(t.up_limit) : '';
   return `
   <div class="inspector-section-title">Speed limits</div>
   <div class="inspector-setting-row">
@@ -72,23 +72,23 @@ function wireGeneralControls(t) {
 
   dlLimited?.addEventListener('change', () => {
     dlLimit.disabled = !dlLimited.checked;
-    const bytes = dlLimited.checked ? mbpsToBps(Number(dlLimit.value) || 0) : 0;
+    const bytes = dlLimited.checked ? mbpsToBs(Number(dlLimit.value) || 0) : 0;
     torrentSetDownloadLimit([t.hash], bytes);
   });
 
   dlLimit?.addEventListener('change', () => {
-    const bytes = mbpsToBps(Number(dlLimit.value));
+    const bytes = mbpsToBs(Number(dlLimit.value));
     if (dlLimited?.checked && bytes > 0) torrentSetDownloadLimit([t.hash], bytes);
   });
 
   ulLimited?.addEventListener('change', () => {
     ulLimit.disabled = !ulLimited.checked;
-    const bytes = ulLimited.checked ? mbpsToBps(Number(ulLimit.value) || 0) : 0;
+    const bytes = ulLimited.checked ? mbpsToBs(Number(ulLimit.value) || 0) : 0;
     torrentSetUploadLimit([t.hash], bytes);
   });
 
   ulLimit?.addEventListener('change', () => {
-    const bytes = mbpsToBps(Number(ulLimit.value));
+    const bytes = mbpsToBs(Number(ulLimit.value));
     if (ulLimited?.checked && bytes > 0) torrentSetUploadLimit([t.hash], bytes);
   });
 
@@ -113,10 +113,15 @@ function wireGeneralControls(t) {
 function renderGeneral(t) {
   const props = t._props || {};
 
-  const connected = (t.num_leechs ?? 0) + (t.num_seeds ?? 0);
+  const connected    = (t.num_leechs ?? 0) + (t.num_seeds ?? 0);
+  const swarmSeeds   = t.num_complete ?? 0;
+  const swarmLeechs  = t.num_incomplete ?? 0;
+  const swarmTotal   = swarmSeeds + swarmLeechs;
   const peersText = connected === 0
     ? 'None'
-    : `${connected} connected (${t.num_seeds ?? 0} seeds, ${t.num_leechs ?? 0} leeches)`;
+    : swarmTotal > 0
+      ? `${connected} connected of ${swarmTotal} (${t.num_seeds ?? 0}↑ / ${t.num_leechs ?? 0}↓ connected, ${swarmSeeds} seeds in swarm)`
+      : `${connected} connected (${t.num_seeds ?? 0} seeds, ${t.num_leechs ?? 0} leeches)`;
 
   const piecesText = props.pieces_have != null
     ? `${props.pieces_have} / ${props.pieces_num} (${formatSize(props.piece_size ?? 0)} each)`
@@ -131,12 +136,32 @@ function renderGeneral(t) {
     ['State',          renderStateBadge(t)],
     ['Size',           formatSize(t.total_size ?? t.size ?? 0)],
     ['Progress',       formatPercent(t.progress ?? 0)],
+    ['Remaining',      (t.amount_left != null && t.amount_left > 0) ? formatSize(t.amount_left) : '—'],
     ['Downloaded',     formatSize(props.total_downloaded ?? t.downloaded ?? 0)],
     ['Uploaded',       formatSize(props.total_uploaded ?? t.uploaded ?? 0)],
     ['Ratio',          formatRatio(t.ratio ?? 0)],
     ['Download speed', formatSpeed(t.dlspeed ?? 0)],
     ['Upload speed',   formatSpeed(t.upspeed ?? 0)],
-    ['ETA',            formatETA(t.eta ?? -1)],
+    ['ETA',            (() => {
+      const sc = torrentStateClass(t);
+      if (sc === 'state-finished') return '—';
+      if (sc === 'state-seeding' || sc === 'state-seeding-stalled') {
+        let limit = null;
+        if ((t.ratio_limit ?? -2) >= 0) {
+          limit = t.ratio_limit;
+        } else if ((t.ratio_limit ?? -2) === -1) {
+          const ge = state.prefs?.max_ratio_enabled ?? false;
+          const gr = state.prefs?.max_ratio ?? null;
+          if (ge && gr != null && gr > 0) limit = gr;
+        }
+        if (limit === null) return '—';
+        const remaining = limit * (t.size || 0) - (t.uploaded ?? 0);
+        if (remaining <= 0) return 'Done';
+        const spd = t.upspeed ?? 0;
+        return spd > 0 ? formatETA(Math.round(remaining / spd)) : '—';
+      }
+      return formatETA(t.eta ?? -1);
+    })()],
     ['Location',       `<span class="info-value--mono">${esc((() => { if (!t.content_path) return t.save_path || '—'; const i = t.content_path.lastIndexOf('/' + (t.name || '')); return i > 0 ? t.content_path.substring(0, i) : t.save_path || t.content_path; })())}</span>`],
     ['Added',          (t.added_on && t.added_on > 946684800) ? formatDate(t.added_on) : '—'],
     ['Completed',      (t.completion_on && t.completion_on > 946684800) ? formatDate(t.completion_on) : '—'],
@@ -146,11 +171,13 @@ function renderGeneral(t) {
       : (t.availability === -1 ? '100%' : '—')],
     ['Pieces',         piecesText],
     ['Wasted',         props.total_wasted != null ? formatSize(props.total_wasted) : '—'],
-    ['Active time',    props.time_elapsed != null ? formatDuration(props.time_elapsed) : '—'],
+    ['Active time',    t.time_active != null ? formatDuration(t.time_active) : (props.time_elapsed != null ? formatDuration(props.time_elapsed) : '—')],
+    ['Last active',    (t.last_activity && t.last_activity > 946684800) ? formatDate(t.last_activity) : '—'],
     ['Seeding time',   (props.seeding_time ?? t.seeding_time) != null ? formatDuration(props.seeding_time ?? t.seeding_time) : '—'],
     ['Connections',    connectionsText],
     ['Peers',          peersText],
     ['Tracker',        esc(t.tracker || '—')],
+    ['Trackers',       t.trackers_count != null ? String(t.trackers_count) : '—'],
   ];
 
   let html = rows.map(([label, value]) =>
@@ -221,7 +248,7 @@ function wireFileControls(t) {
     fileList?.querySelectorAll('.file-row').forEach(row => {
       row.style.display = '';
     });
-    searchInput?.focus();
+    document.getElementById('file-search-input')?.focus();
   });
 
   let lastClickedFileIndex = null;
@@ -278,13 +305,42 @@ function wireFileControls(t) {
 }
 
 function renderFiles(files) {
-  selectedFiles = new Set();
   const panel = document.getElementById('tab-files');
 
   if (!files || files.length === 0) {
+    selectedFiles = new Set();
     panel.innerHTML = '<p class="inspector-empty">No files.</p>';
     return;
   }
+
+  // ── In-place update path ──────────────────────────────────────────
+  // If the file list is already rendered with the same number of files,
+  // update only progress and size values directly on existing elements.
+  // Never touch the search bar, focus, or selection.
+  const existingList = panel.querySelector('.file-list');
+  const existingRows = existingList ? existingList.querySelectorAll('.file-row') : [];
+  if (existingRows.length === files.length) {
+    files.forEach((file, i) => {
+      const idx   = file.index ?? i;
+      const row   = existingList.querySelector(`.file-row[data-index="${idx}"]`);
+      if (!row) return;
+      const pctEl  = row.querySelector('.file-pct');
+      const sizeEl = row.querySelector('.file-size');
+      const prioEl = row.querySelector('.file-priority');
+      if (pctEl)  pctEl.textContent  = formatPercent(Math.min(1, file.progress ?? 0));
+      if (sizeEl) sizeEl.textContent = formatSize(file.size);
+      if (prioEl) {
+        const wanted = (file.priority ?? 1) !== 0;
+        const newVal = wanted ? String(file.priority ?? 1) : '0';
+        if (prioEl.value !== newVal) prioEl.value = newVal;
+      }
+    });
+    return;
+  }
+  // ── Full rebuild path (first render or file count changed) ────────
+  selectedFiles = new Set();
+  const existingSearch = document.getElementById('file-search-input')?.value || '';
+  const searchHadFocus = document.activeElement?.id === 'file-search-input';
 
   const rows = files.map((file, i) => {
     const idx      = file.index ?? i;
@@ -314,35 +370,39 @@ function renderFiles(files) {
   const searchBar = `<div class="file-search-bar">
 <div class="search-wrap">
   ${iconSearch(14)}
-  <input type="search" id="file-search-input" class="search-input"
+  <input type="text" id="file-search-input" class="search-input"
          placeholder="Search files…" autocomplete="off" spellcheck="false"
          aria-label="Search files by name">
-  <button class="btn-ghost icon-btn search-clear" id="file-search-clear"
-          aria-label="Clear file search" hidden>${iconX(16)}</button>
+  <button class="search-clear" id="file-search-clear"
+          aria-label="Clear file search" hidden>${iconX(14)}</button>
 </div>
 </div>`;
 
   panel.innerHTML = searchBar + `<div class="file-list">${rows}</div>`;
   wireFileControls(null);
-}
 
-function decodePeerFlags(flagStr) {
-  const map = {
-    'D': 'Downloading from this peer',
-    'd': 'Peer wants to download from you',
-    'E': 'Encrypted connection',
-    'H': 'Peer found via DHT',
-    'h': 'Peer connected via uTP',
-    'I': 'Incoming connection',
-    'K': 'Peer unchoked but not interested',
-    'O': 'Optimistic unchoke',
-    'T': 'Peer found via PEX',
-    'U': 'Uploading to this peer',
-    'u': 'Peer wants us to upload to them',
-    'X': 'Peer from peer exchange',
-  };
-  const parts = (flagStr || '').split('').map(f => map[f]).filter(Boolean);
-  return { tooltip: parts.length ? parts.join(' · ') : 'No active flags' };
+  // Restore search state after re-render
+  if (existingSearch) {
+    const searchInput = document.getElementById('file-search-input');
+    const searchClear = document.getElementById('file-search-clear');
+    const fileList    = panel.querySelector('.file-list');
+    if (searchInput) searchInput.value = existingSearch;
+    if (searchClear) searchClear.hidden = false;
+    const q = existingSearch.toLowerCase().replace(/\./g, ' ');
+    fileList?.querySelectorAll('.file-row').forEach(row => {
+      const nameEl = row.querySelector('.file-name');
+      const name   = (nameEl?.textContent || '').toLowerCase().replace(/\./g, ' ');
+      row.style.display = name.includes(q) ? '' : 'none';
+    });
+  }
+  if (searchHadFocus) {
+    const searchInput = document.getElementById('file-search-input');
+    if (searchInput) {
+      searchInput.focus();
+      const len = searchInput.value.length;
+      searchInput.setSelectionRange(len, len);
+    }
+  }
 }
 
 function renderPeers() {
@@ -363,12 +423,14 @@ function renderPeers() {
       <span class="peer-addr row-data">${esc(peer.ip)}:${peer.port}</span>
       <span class="peer-client">${esc(peer.client || 'Unknown')}</span>
       <span class="peer-flags" title="${esc(peer.flags_desc || '')}">${esc(peer.flags || '')}</span>
+      ${peer.connection ? `<span class="peer-conn">${esc(peer.connection)}</span>` : ''}
       ${peer.country_code ? `<span class="peer-country">${esc(peer.country_code)}</span>` : ''}
     </div>
     <div class="peer-row__stats">
       <span class="peer-stat">↓ ${dlSpeed}</span>
       <span class="peer-stat">↑ ${upSpeed}</span>
       <span class="peer-stat">${pct} have</span>
+      ${peer.relevance != null ? `<span class="peer-stat">${(peer.relevance * 100).toFixed(0)}% relevant</span>` : ''}
     </div>
   </div>`;
   }).join('');
@@ -406,7 +468,9 @@ function renderTrackers() {
     <div class="tracker-url row-data">${esc(tracker.url)}</div>
     <div class="tracker-meta">
       <span class="tracker-status ${statusClass}">${statusLabel}</span>
-      ${tracker.num_peers ? `<span class="tracker-stat">${tracker.num_peers} peers</span>` : ''}
+      ${tracker.num_seeds != null ? `<span class="tracker-stat">${tracker.num_seeds}↑ seeds</span>` : ''}
+      ${tracker.num_leeches != null ? `<span class="tracker-stat">${tracker.num_leeches}↓ leeches</span>` : ''}
+      ${tracker.num_downloaded != null ? `<span class="tracker-stat">${tracker.num_downloaded} completed</span>` : ''}
       ${tracker.msg ? `<span class="tracker-msg">${esc(tracker.msg)}</span>` : ''}
     </div>
   </div>`;
@@ -435,6 +499,27 @@ function renderActiveTab() {
   renderTab(activeTab);
 }
 
+async function _refreshActiveTab(hash, tab) {
+  try {
+    if (tab === 'peers') {
+      const peersData = await getTorrentPeers(hash, inspectorPeerRid);
+      inspectorPeerRid = peersData.rid ?? inspectorPeerRid;
+      if (peersData.full_update) {
+        inspectorPeers = peersData.peers ?? {};
+      } else {
+        Object.assign(inspectorPeers, peersData.peers ?? {});
+        for (const key of (peersData.peers_removed ?? [])) delete inspectorPeers[key];
+      }
+    } else if (tab === 'files') {
+      inspectorFiles = await getTorrentFiles(hash);
+    } else if (tab === 'trackers') {
+      inspectorTrackers = await getTorrentTrackers(hash);
+    }
+    // General tab re-renders from torrents:changed — no fetch needed
+  } catch (_) {}
+  if (state.inspectorId === hash && activeTab === tab) renderTab(tab);
+}
+
 function setActiveTab(tab) {
   activeTab = tab;
 
@@ -449,13 +534,24 @@ function setActiveTab(tab) {
   });
   document.getElementById(`tab-${tab}`)?.classList.remove('inspector-panel--hidden');
 
+  // Render immediately with cached data, then refresh in the background
   renderTab(tab);
+  if (state.inspectorId) _refreshActiveTab(state.inspectorId, tab);
+}
+
+function closeInspectorSilent() {
+  if (inspectorInterval) {
+    clearInterval(inspectorInterval);
+    inspectorInterval = null;
+  }
+  state.inspectorId = null;
+  inspectorPeerRid  = 0;
+  inspectorFiles    = [];
+  inspectorPeers    = {};
+  inspectorTrackers = [];
 }
 
 function mountInspector() {
-  const inspector = document.getElementById('inspector');
-  const titleEl   = document.getElementById('inspector-title');
-
   document.getElementById('btn-inspector-close').addEventListener('click', () => {
     setInspector(null);
   });
@@ -465,16 +561,23 @@ function mountInspector() {
   });
 
   on('ui:inspector', async hash => {
-    // Clear any running interval first
     if (inspectorInterval) {
       clearInterval(inspectorInterval);
       inspectorInterval = null;
     }
 
+    const rightPanel      = document.getElementById('right-panel');
+    const inspContent     = document.getElementById('inspector-content');
+    const settingsContent = document.getElementById('settings-content');
+    const addContent      = document.getElementById('add-content');
+    const logContent      = document.getElementById('log-content');
+
     if (!hash) {
-      inspector.classList.add('inspector--closed');
-      inspector.classList.remove('inspector--open');
-      inspector.setAttribute('aria-hidden', 'true');
+      if (inspContent && !inspContent.hidden) {
+        inspContent.hidden = true;
+        rightPanel.classList.remove('right-panel--open');
+        rightPanel.setAttribute('aria-hidden', 'true');
+      }
       inspectorPeerRid  = 0;
       inspectorFiles    = [];
       inspectorPeers    = {};
@@ -482,25 +585,26 @@ function mountInspector() {
       return;
     }
 
-    if (state.settingsOpen) setSettingsOpen(false);
-    const addP = document.getElementById('add-panel');
-    if (addP && addP.classList.contains('add-panel--open')) {
-      closeAddPanel();
-    }
+    // Silence other panels directly — no state events, no close-branch side effects
+    state.settingsOpen = false;
+    state.logOpen = false;
+    document.removeEventListener('keydown', handleSettingsEsc);
+    if (settingsContent) settingsContent.hidden = true;
+    if (addContent) { addContent.hidden = true; resetAddModal(); }
+    if (logContent) logContent.hidden = true;
 
-    inspector.classList.add('inspector--open');
-    inspector.classList.remove('inspector--closed');
-    inspector.setAttribute('aria-hidden', 'false');
+    if (inspContent) inspContent.hidden = false;
+    rightPanel.classList.add('right-panel--open');
+    rightPanel.setAttribute('aria-hidden', 'false');
 
     const torrent = state.torrents.get(hash);
     if (!torrent) return;
 
-    titleEl.textContent = torrent.name || '—';
+    const titleEl = document.getElementById('inspector-title');
+    if (titleEl) titleEl.textContent = torrent.name || '—';
 
     const activePanel = document.getElementById(`tab-${activeTab}`);
-    if (activePanel) {
-      activePanel.innerHTML = '<p class="inspector-empty">Loading…</p>';
-    }
+    if (activePanel) activePanel.innerHTML = '<p class="inspector-empty">Loading…</p>';
 
     inspectorPeerRid  = 0;
     inspectorFiles    = [];
@@ -514,49 +618,23 @@ function mountInspector() {
       getTorrentTrackers(hash),
     ]);
 
-    if (filesResult.status === 'fulfilled') {
-      inspectorFiles = filesResult.value;
-    }
+    if (filesResult.status === 'fulfilled')    inspectorFiles    = filesResult.value;
     if (peersResult.status === 'fulfilled') {
       inspectorPeerRid = peersResult.value.rid ?? 0;
       inspectorPeers   = peersResult.value.peers ?? {};
     }
-    if (trackersResult.status === 'fulfilled') {
-      inspectorTrackers = trackersResult.value;
-    }
+    if (trackersResult.status === 'fulfilled') inspectorTrackers = trackersResult.value;
     if (propsResult.status === 'fulfilled') {
       const t = state.torrents.get(hash);
       if (t) state.torrents.set(hash, { ...t, ...propsResult.value, _props: propsResult.value });
     }
 
-    if (state.inspectorId === hash) {
-      setActiveTab(activeTab);
-    }
+    if (state.inspectorId === hash) setActiveTab(activeTab);
 
     inspectorInterval = setInterval(async () => {
       if (!state.inspectorId) return;
       const h = state.inspectorId;
-      try {
-        const peersData = await getTorrentPeers(h, inspectorPeerRid);
-        inspectorPeerRid = peersData.rid ?? inspectorPeerRid;
-        if (peersData.full_update) {
-          inspectorPeers = peersData.peers ?? {};
-        } else {
-          Object.assign(inspectorPeers, peersData.peers ?? {});
-          for (const key of (peersData.peers_removed ?? [])) {
-            delete inspectorPeers[key];
-          }
-        }
-        const filesData    = await getTorrentFiles(h);
-        inspectorFiles     = filesData;
-        const trackersData = await getTorrentTrackers(h);
-        inspectorTrackers  = trackersData;
-      } catch (_) {
-        // silent — inspector shows slightly stale data
-      }
-      if (state.inspectorId === h) {
-        renderActiveTab();
-      }
+      await _refreshActiveTab(h, activeTab);
     }, 3000);
   });
 
@@ -564,7 +642,10 @@ function mountInspector() {
     if (state.inspectorId === null) return;
     const t = state.torrents.get(state.inspectorId);
     if (!t) return;
-    titleEl.textContent = t.name || '—';
+    const titleEl = document.getElementById('inspector-title');
+    if (titleEl) titleEl.textContent = t.name || '—';
+    // Files tab data comes from getTorrentFiles, not torrents:changed — skip it
+    if (activeTab === 'files') return;
     if (activeTab === 'general' && !t._props) return;
     renderTab(activeTab);
   });

@@ -88,12 +88,12 @@ async function torrentFilePriority(hash, indexes, priority) {
 
 async function torrentAdd(params) {
   const form = new FormData();
-  if (params.urls)        form.append('urls', params.urls);
+  if (params.urls)        form.append('urls',     params.urls);
   if (params.torrentFile) form.append('torrents', params.torrentFile);
   if (params.savepath)    form.append('savepath', params.savepath);
-  form.append('paused',           params.paused ? 'true' : 'false');
-  form.append('ratioLimit',       params.ratioLimit       ?? -1);
-  form.append('seedingTimeLimit', params.seedingTimeLimit ?? -1);
+  // Respect the global "start paused" preference
+  const startPaused = state.prefs?.start_paused_enabled ?? false;
+  form.append('paused', startPaused ? 'true' : 'false');
   const resp = await fetch(API_BASE + '/torrents/add', { method: 'POST', body: form });
   return resp.text();
 }
@@ -108,9 +108,6 @@ async function setPreferences(prefs) {
   return api('/app/setPreferences', { body: 'json=' + encodeURIComponent(JSON.stringify(prefs)) });
 }
 async function getTransferInfo() { return api('/transfer/info'); }
-async function toggleAltSpeedLimits()        { return api('/transfer/toggleSpeedLimitsMode', { body: '' }); }
-async function setGlobalDownloadLimit(limit) { return api('/transfer/setDownloadLimit', { body: `limit=${limit}` }); }
-async function setGlobalUploadLimit(limit)   { return api('/transfer/setUploadLimit',   { body: `limit=${limit}` }); }
 
 async function getTorrentProperties(hash) { return api('/torrents/properties', { hash }); }
 async function getTorrentTrackers(hash)   { return api('/torrents/trackers',   { hash }); }
@@ -121,9 +118,12 @@ async function torrentSetSuperSeeding(hashes, value) {
   return api('/torrents/setSuperSeeding', { body: `hashes=${hashes.join('|')}&value=${value}` });
 }
 
-async function torrentRenameFolder(hash, oldPath, newPath) {
-  return api('/torrents/renameFolder', {
-    body: `hash=${hash}&oldPath=${encodeURIComponent(oldPath)}&newPath=${encodeURIComponent(newPath)}`,
-  });
+async function getLog(normal, info, warning, critical) {
+  if (normal   === undefined) normal   = false;
+  if (info     === undefined) info     = true;
+  if (warning  === undefined) warning  = true;
+  if (critical === undefined) critical = true;
+  return api('/log/main', { normal, info, warning, critical, last_known_id: -1 });
 }
+
 

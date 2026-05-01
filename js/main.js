@@ -23,7 +23,9 @@ function injectStaticIcons() {
     'icon--settings':     () => iconSettings(16),
     'icon--plus':         () => iconPlus(14),
     'icon--file':         () => iconFile(16),
-
+    'icon--log':          () => iconListChecks(16),
+    'icon--refresh-cw':   () => iconRefreshCw(14),
+    'icon--moon':         () => iconMoon(14),
   };
 
   Object.entries(iconMap).forEach(([cls, iconFn]) => {
@@ -42,16 +44,43 @@ async function boot() {
   mountInspector();
   mountModals();
   mountSettings();
+  mountLog();
 
   const viewport = document.getElementById('list-viewport');
   mountList(viewport);
 
   document.addEventListener('keydown', (e) => {
+    const tag = document.activeElement?.tagName;
+    const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+
     if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-      const tag = document.activeElement?.tagName;
-      if (tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') {
+      if (!inInput) {
         e.preventDefault();
         selectAll();
+      }
+      return;
+    }
+
+    if (inInput) return;
+
+    if (e.key === 'Escape') {
+      const inspContent = document.getElementById('inspector-content');
+      if (inspContent && !inspContent.hidden) {
+        setInspector(null);
+        return;
+      }
+    }
+
+    if (e.key === 'Enter' || e.key === 'i') {
+      if (state.selected.size === 1) {
+        const hash = [...state.selected][0];
+        const inspContent = document.getElementById('inspector-content');
+        const isOpen = inspContent && !inspContent.hidden;
+        if (isOpen && state.inspectorId === hash) {
+          setInspector(null);
+        } else {
+          setInspector(hash);
+        }
       }
     }
   });
@@ -66,7 +95,6 @@ async function boot() {
   });
 
   on('connection:restored', () => {
-    showToast('Reconnected to qBittorrent', 'success');
     const connEl = document.getElementById('conn-status');
     if (connEl) {
       connEl.className = 'conn-status conn-status--connected';

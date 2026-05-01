@@ -38,7 +38,8 @@ function updateAddButton() {
 function resetAddModal() {
   selectedFile = null;
   selectedFileBase64 = null;
-  document.getElementById('magnet-input').value = '';
+  const magnetInput = document.getElementById('magnet-input');
+  if (magnetInput) magnetInput.value = '';
   const fileInput = document.getElementById('torrent-file-input');
   if (fileInput) fileInput.value = '';
   const filenameEl = document.getElementById('dropzone-filename');
@@ -49,17 +50,27 @@ function resetAddModal() {
 }
 
 function openAddModal() {
-  if (state.settingsOpen) setSettingsOpen(false);
-  if (state.inspectorId !== null) setInspector(null);
-  const panel = document.getElementById('add-panel');
-  if (!panel) return;
+  const rightPanel      = document.getElementById('right-panel');
+  const addContent      = document.getElementById('add-content');
+  const inspContent     = document.getElementById('inspector-content');
+  const settingsContent = document.getElementById('settings-content');
+  const logContent      = document.getElementById('log-content');
+
+  // Silence other panels directly — no state events, no close-branch side effects
+  closeInspectorSilent();
+  state.settingsOpen = false;
+  state.logOpen = false;
+  document.removeEventListener('keydown', handleSettingsEsc);
+  if (inspContent)     inspContent.hidden     = true;
+  if (settingsContent) settingsContent.hidden = true;
+  if (logContent)      logContent.hidden      = true;
+  if (addContent)      addContent.hidden      = false;
+
+  rightPanel.classList.add('right-panel--open');
+  rightPanel.setAttribute('aria-hidden', 'false');
+
   document.getElementById('add-download-dir').value =
     state.prefs?.save_path || '';
-  const startCb = document.getElementById('add-start-when-added');
-  if (startCb) startCb.checked = !(state.prefs?.start_paused_enabled ?? false);
-  panel.classList.add('add-panel--open');
-  panel.classList.remove('add-panel--closed');
-  panel.setAttribute('aria-hidden', 'false');
 }
 
 
@@ -71,22 +82,24 @@ function handleFile(file) {
     const filenameEl = document.getElementById('dropzone-filename');
     filenameEl.textContent = file.name;
     filenameEl.hidden = false;
+    document.getElementById('torrent-dropzone')?.classList.add('has-file');
     updateAddButton();
   };
   reader.readAsDataURL(file);
 }
 
 function closeAddPanel() {
-  const panel = document.getElementById('add-panel');
-  if (!panel) return;
-  panel.classList.remove('add-panel--open');
-  panel.classList.add('add-panel--closed');
-  panel.setAttribute('aria-hidden', 'true');
+  const rightPanel = document.getElementById('right-panel');
+  const addContent = document.getElementById('add-content');
+  if (!addContent || addContent.hidden) return;
+  addContent.hidden = true;
+  rightPanel.classList.remove('right-panel--open');
+  rightPanel.setAttribute('aria-hidden', 'true');
   resetAddModal();
 }
 
 function mountAddModal() {
-  document.getElementById('magnet-input').addEventListener('input', updateAddButton);
+  document.getElementById('magnet-input')?.addEventListener('input', updateAddButton);
 
   const dropzone  = document.getElementById('torrent-dropzone');
   const fileInput = document.getElementById('torrent-file-input');
@@ -127,17 +140,16 @@ function mountAddModal() {
     btn.innerHTML = iconLoader(16, 'icon--spinning') + ' Adding…';
 
     try {
-      const startWhenAdded = document.getElementById('add-start-when-added')?.checked ?? true;
       if (selectedFile) {
-        await torrentAdd({ torrentFile: selectedFile, savepath: dir, paused: !startWhenAdded });
+        await torrentAdd({ savepath: dir, torrentFile: selectedFile });
       } else {
         const magnet = document.getElementById('magnet-input')?.value.trim() || '';
-        if (!magnet) return;
-        await torrentAdd({ urls: magnet, savepath: dir, paused: !startWhenAdded });
+        if (!magnet) { btn.disabled = false; btn.textContent = 'Add'; return; }
+        await torrentAdd({ savepath: dir, urls: magnet });
       }
       closeAddPanel();
+      forceRefresh();
       showToast('Torrent added', 'success');
-      await forceRefresh();
     } catch (err) {
       btn.disabled = false;
       btn.textContent = 'Add';
@@ -150,8 +162,8 @@ function mountAddModal() {
 
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-      const panel = document.getElementById('add-panel');
-      if (panel && panel.classList.contains('add-panel--open')) closeAddPanel();
+      const addContent = document.getElementById('add-content');
+      if (addContent && !addContent.hidden) closeAddPanel();
     }
   });
 }
@@ -247,26 +259,13 @@ function mountRenameModal() {
   const modal   = document.getElementById('modal-rename');
   const inputEl = document.getElementById('rename-input');
 
-  function openModal(id, torrent, isFolder, oldFolderPath) {
-    inputEl.value = isFolder ? (oldFolderPath?.split('/').pop() ?? '') : (torrent?.name ?? '');
-    modal._pendingId      = id;
-    modal._pendingTorrent = torrent;
-    modal._folderRename   = isFolder ? { oldPath: oldFolderPath } : null;
-    document.getElementById('modal-rename-title').textContent = isFolder ? 'Rename Folder' : 'Rename';
-    modal.showModal();
-    inputEl.select();
-  }
-
   document.addEventListener('modal:rename', e => {
     const { id, torrent } = e.detail;
-    openModal(id, torrent, false, null);
-  });
-
-  document.addEventListener('modal:rename-folder', e => {
-    const { id, torrent } = e.detail;
-    const savePath = torrent?.save_path ?? '';
-    const folderPath = savePath.replace(/\/$/, '');
-    openModal(id, torrent, true, folderPath);
+    inputEl.value = torrent?.name ?? '';
+    modal._pendingId      = id;
+    modal._pendingTorrent = torrent;
+    modal.showModal();
+    inputEl.select();
   });
 
   document.getElementById('rename-cancel').addEventListener('click', () => {
@@ -277,13 +276,9 @@ function mountRenameModal() {
     const newName = inputEl.value.trim();
     if (!newName) return;
     const hash = modal._pendingId;
-    const fr = modal._folderRename;
     modal.close();
     try {
-      if (fr) {
-        const parent = fr.oldPath.substring(0, fr.oldPath.lastIndexOf('/') + 1);
-        await torrentRenameFolder(hash, fr.oldPath, parent + newName);
-      } else {
+      {
         await torrentRename(hash, newName);
       }
       await forceRefresh();

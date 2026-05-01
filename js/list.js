@@ -16,7 +16,7 @@ const FILTER_MAP = {
   checking:    t => ['checkingDL', 'checkingUP', 'checkingResumeData'].includes(t.state),
   active:      t => (t.dlspeed ?? 0) > 0 || (t.upspeed ?? 0) > 0,
   inactive:    t => (t.dlspeed ?? 0) === 0 && (t.upspeed ?? 0) === 0,
-  stalled:     t => t.state === 'stalledDL' || t.state === 'stalledUP',
+  stalled:     t => t.state === 'stalledDL',
 };
 
 function applyFilter(torrents, filter, search) {
@@ -134,7 +134,7 @@ function render() {
 
   if (filteredSorted.length === 0) {
     const emptyMessages = {
-      all:         state.search.trim() ? 'No torrents match.' : 'No torrents match.',
+      all:         state.search.trim() ? 'No torrents match.' : 'No torrents.',
       downloading: 'No active downloads.',
       seeding:     'No torrents seeding.',
       paused:      'No paused torrents.',
@@ -215,8 +215,8 @@ function mountList(containerEl) {
     lastClickedHash = hash;
 
     {
-      const inspEl = document.getElementById('inspector');
-      const isOpen = inspEl && inspEl.classList.contains('inspector--open');
+      const inspContent = document.getElementById('inspector-content');
+      const isOpen = inspContent && !inspContent.hidden;
       if (isOpen && state.inspectorId === hash) {
         setInspector(null);
       } else {

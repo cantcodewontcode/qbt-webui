@@ -39,7 +39,9 @@ function renderRow(torrent, isSelected) {
   const ratio      = formatRatio(torrent.ratio ?? -1);
   const ratioClass = (torrent.ratio >= 1.0) ? 'is-good' : '';
 
-  const eta  = formatETA(torrent.eta ?? -1);
+  const eta  = (stateClass === 'state-seeding' || stateClass === 'state-finished')
+    ? '—'
+    : formatETA(torrent.eta ?? -1);
   const size = formatSize(torrent.size || 0);
 
   const peer      = peerDisplay(torrent, stateClass);
@@ -112,14 +114,18 @@ function renderRow(torrent, isSelected) {
   let peerLine = '';
   if (stateClass === 'state-downloading' && connected > 0) {
     peerLine = `<span class="row-peer-inline">Downloading from ${numSeeds} of ${connected} peers</span>`;
-  } else if (stateClass === 'state-seeding' && connected > 0) {
-    if (torrent.super_seeding) {
+  } else if ((stateClass === 'state-seeding' || stateClass === 'state-seeding-stalled') && torrent.super_seeding) {
+    if (connected > 0) {
       peerLine = `<span class="row-peer-inline row-peer-inline--super">
     ${iconSuperSeeding(13)}Super Seeding to ${numLeechs} of ${connected} peers
   </span>`;
     } else {
-      peerLine = `<span class="row-peer-inline">Seeding to ${numLeechs} of ${connected} peers</span>`;
+      peerLine = `<span class="row-peer-inline row-peer-inline--super">
+    ${iconSuperSeeding(13)}Super Seeding
+  </span>`;
     }
+  } else if (stateClass === 'state-seeding' && connected > 0) {
+    peerLine = `<span class="row-peer-inline">Seeding to ${numLeechs} of ${connected} peers</span>`;
   } else if (stateClass === 'state-stalled' && connected > 0) {
     peerLine = `<span class="row-peer-inline row-peer-warn">${connected} peers, no transfer</span>`;
   }

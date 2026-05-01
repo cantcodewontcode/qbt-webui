@@ -81,11 +81,11 @@ function renderSpeed(s) {
   <div class="settings-section">
     ${settingsRow('Download limit',
       toggle('set-dl-enabled', dlEnabled) +
-      numberInput('set-dl-limit', dlEnabled ? kbpsToMbps(s.dl_limit) : '') + ' Mbps'
+      numberInput('set-dl-limit', dlEnabled ? kBsToMbps(s.dl_limit) : '') + ' Mbps'
     )}
     ${settingsRow('Upload limit',
       toggle('set-ul-enabled', ulEnabled) +
-      numberInput('set-ul-limit', ulEnabled ? kbpsToMbps(s.up_limit) : '') + ' Mbps'
+      numberInput('set-ul-limit', ulEnabled ? kBsToMbps(s.up_limit) : '') + ' Mbps'
     )}
     <div class="settings-group-title">Alternative speed limits</div>
     ${settingsRow('Enable alternative speeds',
@@ -93,10 +93,10 @@ function renderSpeed(s) {
     )}
     <div id="alt-speed-fields"${altOn}>
       ${settingsRow('Alternative download',
-        numberInput('set-alt-dl', kbpsToMbps(s.alt_dl_limit ?? 0)) + ' Mbps'
+        numberInput('set-alt-dl', kBsToMbps(s.alt_dl_limit ?? 0)) + ' Mbps'
       )}
       ${settingsRow('Alternative upload',
-        numberInput('set-alt-ul', kbpsToMbps(s.alt_up_limit ?? 0)) + ' Mbps'
+        numberInput('set-alt-ul', kBsToMbps(s.alt_up_limit ?? 0)) + ' Mbps'
       )}
       <div class="settings-group-title">Schedule</div>
       ${settingsRow('Use scheduled times',
@@ -249,22 +249,22 @@ function wireSection() {
   body.querySelector('#set-dl-enabled')?.addEventListener('change', e => {
     const enabled = e.target.checked;
     const limit   = Number(body.querySelector('#set-dl-limit')?.value ?? 0);
-    setPreferences({ dl_limit: enabled ? (mbpsToKbps(limit) || mbpsToKbps(8)) : 0 });
+    setPreferences({ dl_limit: enabled ? (mbpsToKBs(limit) || mbpsToKBs(8)) : 0 });
   });
   body.querySelector('#set-dl-limit')?.addEventListener('blur', e => {
     if (body.querySelector('#set-dl-enabled')?.checked) {
-      setPreferences({ dl_limit: mbpsToKbps(Number(e.target.value) || 0) });
+      setPreferences({ dl_limit: mbpsToKBs(Number(e.target.value) || 0) });
     }
   });
 
   body.querySelector('#set-ul-enabled')?.addEventListener('change', e => {
     const enabled = e.target.checked;
     const limit   = Number(body.querySelector('#set-ul-limit')?.value ?? 0);
-    setPreferences({ up_limit: enabled ? (mbpsToKbps(limit) || mbpsToKbps(8)) : 0 });
+    setPreferences({ up_limit: enabled ? (mbpsToKBs(limit) || mbpsToKBs(8)) : 0 });
   });
   body.querySelector('#set-ul-limit')?.addEventListener('blur', e => {
     if (body.querySelector('#set-ul-enabled')?.checked) {
-      setPreferences({ up_limit: mbpsToKbps(Number(e.target.value) || 0) });
+      setPreferences({ up_limit: mbpsToKBs(Number(e.target.value) || 0) });
     }
   });
 
@@ -278,10 +278,10 @@ function wireSection() {
   }
 
   body.querySelector('#set-alt-dl')?.addEventListener('blur', e => {
-    setPreferences({ alt_dl_limit: mbpsToKbps(Number(e.target.value) || 0) });
+    setPreferences({ alt_dl_limit: mbpsToKBs(Number(e.target.value) || 0) });
   });
   body.querySelector('#set-alt-ul')?.addEventListener('blur', e => {
-    setPreferences({ alt_up_limit: mbpsToKbps(Number(e.target.value) || 0) });
+    setPreferences({ alt_up_limit: mbpsToKBs(Number(e.target.value) || 0) });
   });
 
   const schedToggle = body.querySelector('#set-alt-sched');
@@ -424,54 +424,57 @@ async function setActiveSection(section) {
   wireSection();
 }
 
-function handleEsc(e) {
+function handleSettingsEsc(e) {
   if (e.key === 'Escape') setSettingsOpen(false);
 }
 
 function mountSettings() {
-  const panel    = document.getElementById('settings-panel');
   const closeBtn = document.getElementById('btn-settings-close');
   const sel      = document.getElementById('settings-section-select');
 
-  if (!panel || !closeBtn) return;
+  if (!closeBtn) return;
 
   closeBtn.addEventListener('click', () => setSettingsOpen(false));
 
   sel?.addEventListener('change', () => setActiveSection(sel.value)); // setActiveSection is async; no need to await here — fire-and-forget is fine for UI nav
 
   on('ui:settings', async open => {
+    const rightPanel      = document.getElementById('right-panel');
+    const settingsContent = document.getElementById('settings-content');
+    const inspContent     = document.getElementById('inspector-content');
+    const addContent      = document.getElementById('add-content');
+    const logContent      = document.getElementById('log-content');
+
     if (open) {
-      if (state.inspectorId !== null) setInspector(null);
-      const addP = document.getElementById('add-panel');
-      if (addP && addP.classList.contains('add-panel--open')) {
-        addP.classList.remove('add-panel--open');
-        addP.classList.add('add-panel--closed');
-        addP.setAttribute('aria-hidden', 'true');
-      }
-      panel.classList.add('settings--open');
-      panel.classList.remove('settings--closed');
-      panel.setAttribute('aria-hidden', 'false');
-      document.addEventListener('keydown', handleEsc);
+      // Silence other panels directly — no state events, no close-branch side effects
+      closeInspectorSilent();
+      state.logOpen = false;
+      if (inspContent) inspContent.hidden = true;
+      if (addContent) { addContent.hidden = true; resetAddModal(); }
+      if (logContent) logContent.hidden = true;
+      if (settingsContent) settingsContent.hidden = false;
+      rightPanel.classList.add('right-panel--open');
+      rightPanel.setAttribute('aria-hidden', 'false');
+      document.addEventListener('keydown', handleSettingsEsc);
 
       const section = sel?.value || 'speed';
-
-      // Render pre-warmed values immediately if available
       await setActiveSection(section);
-
-      // Re-fetch fresh preferences and re-render
       try {
         const fresh = await getPreferences();
         setPrefs(fresh);
         await setActiveSection(section);
       } catch (err) {
         console.error('[settings] app/preferences failed:', err);
-        // Pre-warmed values remain displayed — don't blank out
       }
     } else {
-      panel.classList.remove('settings--open');
-      panel.classList.add('settings--closed');
-      panel.setAttribute('aria-hidden', 'true');
-      document.removeEventListener('keydown', handleEsc);
+      if (settingsContent) settingsContent.hidden = true;
+      // Only close the container if no other content is showing
+      const anyVisible = [inspContent, addContent, logContent].some(el => el && !el.hidden);
+      if (!anyVisible) {
+        rightPanel.classList.remove('right-panel--open');
+        rightPanel.setAttribute('aria-hidden', 'true');
+      }
+      document.removeEventListener('keydown', handleSettingsEsc);
     }
   });
 

@@ -10,6 +10,7 @@ const state = {
   selected:       new Set(),
   inspectorId:    null,
   settingsOpen:   false,
+  logOpen:        false,
   connected:      true,
   categories:     {},
   activeCategory: null,
@@ -95,6 +96,11 @@ function setInspector(idOrNull) {
 function setSettingsOpen(bool) {
   state.settingsOpen = bool;
   emit('ui:settings', bool);
+}
+
+function setLogOpen(bool) {
+  state.logOpen = bool;
+  emit('ui:log', bool);
 }
 
 function setConnected(bool) {

@@ -5,17 +5,16 @@
     }
 
 /* ════════════════════════════════════════════════════════════════
-   Transmission Web UI — app.css
-   Phase 2 of 12
+   qBittorrent Web UI — app.css
    ════════════════════════════════════════════════════════════════ */
 
 
 /* ── §1  Design Tokens (:root) ───────────────────────────────────
-   Copied verbatim from DESIGN_SYSTEM.md §12
+   Reference: DESIGN_SYSTEM.md §12
    ─────────────────────────────────────────────────────────────── */
 
 /* ════════════════════════════════════════════════════════════════
-   Transmission Web UI — Design Tokens
+   qBittorrent Web UI — Design Tokens
    v1.1 — reference: DESIGN_SYSTEM.md
    All component code uses var(--token). No raw hex values.
    ════════════════════════════════════════════════════════════════ */
@@ -261,8 +260,7 @@ a:hover {
   outline: none;
 }
 
-#inspector {
-  width: var(--width-inspector);
+#right-panel {
   flex-shrink: 0;
 }
 
@@ -374,12 +372,25 @@ a:hover {
 .search-clear {
   position: absolute;
   right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
   color: var(--color-text-disabled);
-  opacity: 1;
-  transition: opacity var(--duration-fast) var(--ease-default);
+  transition: background var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.search-clear[hidden] {
+  display: none;
 }
 
 .search-clear:hover {
+  background: var(--color-bg-inset);
   color: var(--color-text-secondary);
 }
 
@@ -410,6 +421,28 @@ a:hover {
 
 .speed-readout--up.is-active {
   color: var(--color-success);
+}
+
+.alt-speed-btn {
+  color: var(--color-warning);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-warning-subtle);
+  transition: background var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+.alt-speed-btn[hidden] {
+  display: none;
+}
+
+.alt-speed-btn:hover {
+  background: color-mix(in srgb, var(--color-warning) 20%, transparent);
+  color: var(--color-warning);
 }
 
 
@@ -521,17 +554,6 @@ a:hover {
 .col-eta    { width: 72px;  flex-shrink: 0; text-align: right; justify-content: flex-end; padding-right: var(--space-3); }
 .col-pct    { width: 52px;  flex-shrink: 0; text-align: right; justify-content: flex-end; padding-right: var(--space-3); }
 
-.col-header-label {
-  font-size: var(--type-label);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-secondary);
-  letter-spacing: 0.02em;
-  height: var(--height-colheader);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 /* ── §9  Torrent Rows ────────────────────────────────────────────── */
 
 .torrent-row {
@@ -633,9 +655,11 @@ a:hover {
 /* State-specific inline progress fill colors */
 .state-downloading .row-progress-inline__fill { background: var(--color-info); }
 .state-seeding     .row-progress-inline__fill { background: var(--color-success); }
+.state-seeding-stalled .row-progress-inline__fill { background: var(--color-success); opacity: 0.5; }
 .state-checking    .row-progress-inline__fill { background: var(--color-info); }
 .state-queued      .row-progress-inline__fill { background: var(--color-border-strong); }
 .state-error       .row-progress-inline__fill { background: var(--color-critical); }
+.state-missing     .row-progress-inline__fill { background: var(--color-critical); }
 .state-paused      .row-progress-inline__fill { background: var(--color-border-strong); }
 .state-stalled     .row-progress-inline__fill { background: var(--color-border-strong); }
 .state-metadata    .row-progress-inline__fill { background: var(--color-border-strong); }
@@ -677,12 +701,17 @@ a:hover {
   background-color: color-mix(in srgb, var(--color-critical) 6%, transparent);
 }
 
+.torrent-row.state-missing {
+  background-color: color-mix(in srgb, var(--color-critical) 6%, transparent);
+}
+
 /* Selected overrides all state fills */
 .torrent-row.row--selected {
   background-color: var(--color-accent-subtle) !important;
 }
 
 .state-error .row-name { color: var(--color-critical); }
+.state-missing .row-name { color: var(--color-critical); }
 
 /* Spinner animation */
 @keyframes spin {
@@ -704,9 +733,9 @@ a:hover {
 }
 
 
-/* ── §10  Inspector Panel ─────────────────────────────────────────── */
+/* ── §9b  Right Panel Container ──────────────────────────────────── */
 
-#inspector {
+#right-panel {
   width: 0;
   overflow: hidden;
   background: var(--color-bg-overlay);
@@ -717,16 +746,94 @@ a:hover {
   flex-shrink: 0;
 }
 
-#inspector.inspector--open {
+#right-panel.right-panel--open {
   width: var(--width-inspector);
 }
 
-#inspector.inspector--closed {
-  width: 0;
+.right-panel__content {
+  /* Fills the container; display toggled between none and flex by JS */
+  display: flex;
+  flex-direction: column;
+  width: var(--width-inspector);
+  height: 100%;
+  min-width: var(--width-inspector);
+  overflow: hidden;
 }
 
+.right-panel__content[hidden] {
+  display: none;
+}
+
+.right-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.right-panel__title {
+  font-size: var(--type-heading-2);
+  font-weight: var(--weight-semibold);
+}
+
+/* ── Log Panel ───────────────────────────────────────────────────── */
+
+.log-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-2) 0;
+}
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 64px 60px 1fr;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--color-border-subtle);
+  font-size: var(--type-body-sm);
+  align-items: baseline;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-entry__time {
+  font-family: var(--font-data);
+  font-size: var(--type-data-sm);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.log-entry__label {
+  font-size: var(--type-label);
+  font-weight: var(--weight-medium);
+  flex-shrink: 0;
+}
+
+.log-entry__msg {
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.log-entry--info    .log-entry__label { color: var(--color-text-secondary); }
+.log-entry--warning .log-entry__label { color: var(--color-warning); }
+.log-entry--critical .log-entry__label { color: var(--color-critical); }
+
+.log-entry--critical {
+  background: color-mix(in srgb, var(--color-critical) 4%, transparent);
+}
+.log-entry--warning {
+  background: color-mix(in srgb, var(--color-warning) 4%, transparent);
+}
+
+/* ── §10  Inspector Panel ─────────────────────────────────────────── */
+
 #inspector-header, #inspector-tabs, #inspector-body {
-  min-width: var(--width-inspector);
+  min-width: 0;
+  width: 100%;
 }
 
 #inspector-header {
@@ -977,7 +1084,7 @@ select.input:disabled,
 .textarea {
   height: auto;
   padding: var(--space-2) var(--space-3);
-  resize: vertical;
+  resize: none;
   min-height: 72px;
 }
 
@@ -1100,34 +1207,6 @@ dialog[open] {
   padding: var(--space-3) var(--space-4);
 }
 
-.modal-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--color-border);
-  padding: 0 var(--space-4);
-}
-
-.modal-tab {
-  height: 36px;
-  padding: 0 var(--space-3);
-  font-size: var(--type-label);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-secondary);
-  border-bottom: 2px solid transparent;
-  background: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
-  cursor: pointer;
-  transition: color var(--duration-fast) var(--ease-default),
-              border-color var(--duration-fast) var(--ease-default);
-}
-
-.modal-tab--active {
-  color: var(--color-text-primary);
-  border-bottom-color: var(--color-accent);
-}
-
-
 /* ── §15  Context Menu ───────────────────────────────────────────── */
 
 .context-menu {
@@ -1225,21 +1304,6 @@ dialog[open] {
 
 /* ── §16  Settings Panel ─────────────────────────────────────────── */
 
-#settings-panel {
-  width: 0;
-  overflow: hidden;
-  background: var(--color-bg-overlay);
-  border-left: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  transition: width var(--duration-slow) var(--ease-enter);
-  flex-shrink: 0;
-}
-
-#settings-panel.settings--open  { width: var(--width-inspector); visibility: visible; }
-#settings-panel.settings--closed { width: 0; visibility: hidden; }
-
-#settings-panel > * { min-width: var(--width-inspector); }
 
 .settings-layout {
   display: flex;
@@ -1478,10 +1542,12 @@ dialog[open] {
 
 .state-badge--downloading { background: color-mix(in srgb, var(--color-info)     15%, transparent); color: var(--color-info); }
 .state-badge--seeding     { background: color-mix(in srgb, var(--color-success)  15%, transparent); color: var(--color-success); }
+.state-badge--seeding-stalled { background: color-mix(in srgb, var(--color-success) 10%, transparent); color: var(--color-success); opacity: 0.7; }
 .state-badge--paused      { background: var(--color-bg-inset); color: var(--color-text-secondary); }
 .state-badge--queued      { background: var(--color-bg-inset); color: var(--color-text-secondary); }
 .state-badge--checking    { background: color-mix(in srgb, var(--color-info)     15%, transparent); color: var(--color-info); }
 .state-badge--error       { background: color-mix(in srgb, var(--color-critical) 15%, transparent); color: var(--color-critical); }
+.state-badge--missing     { background: color-mix(in srgb, var(--color-critical) 15%, transparent); color: var(--color-critical); }
 .state-badge--stalled     { background: color-mix(in srgb, var(--color-warning)  15%, transparent); color: var(--color-warning); }
 .state-badge--metadata    { background: color-mix(in srgb, var(--color-info)     15%, transparent); color: var(--color-info); }
 .state-badge--finished    { background: var(--color-bg-inset); color: var(--color-text-secondary); }
@@ -1604,6 +1670,12 @@ dialog[open] {
   background: var(--color-accent-subtle);
 }
 
+.dropzone.has-file {
+  border-color: var(--color-success);
+  border-style: solid;
+  background: var(--color-success-subtle);
+}
+
 .dropzone .icon {
   color: var(--color-text-disabled);
 }
@@ -1668,7 +1740,7 @@ dialog[open] {
   }
 
   /* Exception: progress bar width change communicates live data, not decoration */
-  .row-progress__fill {
+  .row-progress-inline__fill {
     transition-duration: 400ms !important;
   }
 }
@@ -1700,7 +1772,7 @@ dialog[open] {
 
 /* Mobile */
 @media (max-width: 639px) {
-  #inspector {
+  #right-panel {
     width: 100%;
   }
 
@@ -1791,7 +1863,7 @@ dialog[open] {
 .speed-popover {
   position: fixed;  /* creates positioning context for caret */
   z-index: var(--z-modal);
-  width: 280px;
+  width: 300px;
   background: var(--color-bg-overlay);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -1842,6 +1914,13 @@ dialog[open] {
   margin: 0;
 }
 
+.speed-popover__desc {
+  font-size: var(--type-body-sm);
+  color: var(--color-text-secondary);
+  margin: var(--space-2) 0 0 0;
+  line-height: 1.5;
+}
+
 .speed-popover__footer {
   display: flex;
   justify-content: flex-end;
@@ -1867,6 +1946,115 @@ dialog[open] {
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
   border-bottom: 5px solid var(--color-bg-overlay);
+}
+
+/* Speed popover redesign — section/row/sub layout */
+
+.sp-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sp-label {
+  font-size: var(--type-body-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-primary);
+}
+
+.sp-label--sm {
+  font-size: var(--type-caption);
+  color: var(--color-text-secondary);
+}
+
+.sp-toggle {
+  flex-shrink: 0;
+}
+
+.sp-toggle--sm .toggle-track {
+  width: 28px;
+  height: 16px;
+}
+
+.sp-toggle--sm .toggle-track::after {
+  width: 10px;
+  height: 10px;
+}
+
+.sp-sub {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--color-border-subtle);
+}
+.sp-sub[hidden] {
+  display: none;
+}
+
+.sp-alt-row,
+.sp-time-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sp-alt-label {
+  font-family: var(--font-data);
+  font-size: var(--type-data-sm);
+  color: var(--color-text-secondary);
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.sp-input {
+  width: 72px;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.sp-unit {
+  font-size: var(--type-caption);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.sp-time {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.sp-divider {
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: var(--space-1) 0;
+}
+
+.sp-days {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.sp-day {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--type-caption);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.sp-day input {
+  cursor: pointer;
 }
 
 
@@ -2012,6 +2200,7 @@ dialog[open] {
   font-size: var(--type-caption);
   color: var(--color-text-secondary);
   white-space: nowrap;
+  margin-left: auto;
 }
 
 .priority-select {
@@ -2055,6 +2244,13 @@ dialog[open] {
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+}
+
+.peer-conn {
+  font-family: var(--font-data);
+  font-size: var(--type-data-sm);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 .peer-flags {
@@ -2108,48 +2304,7 @@ dialog[open] {
   color: var(--color-text-secondary);
 }
 
-/* ── Settings additions (Phase 11) ─────────────────────────── */
-.settings-group-title {
-  font-size: var(--type-label);
-  font-weight: var(--weight-semibold);
-  color: var(--color-accent);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin: var(--space-6) 0 var(--space-3);
-}
-.settings-section { max-width: 600px; }
-.day-checkbox {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: var(--type-caption);
-  cursor: pointer;
-  margin-right: 2px;
-  margin-bottom: 2px;
-}
-.about-section { text-align: left; }
-.about-title {
-  font-size: var(--type-heading-1);
-  font-weight: var(--weight-semibold);
-  margin-bottom: var(--space-4);
-}
-.about-links {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-.about-links a {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  color: var(--color-accent);
-  font-size: var(--type-body);
-}
-.about-links a:hover { color: var(--color-accent-hover); }
-
-
 /* ── §29  user-select: none on all tab buttons ──────────────────── */
-.modal-tab,
 .inspector-tab,
 .filter-tab,
 .settings-nav__item {
@@ -2230,36 +2385,10 @@ dialog[open] {
 
 
 /* ── §31  Add Torrent Panel ─────────────────────────────────────── */
-.add-panel {
-  width: 0;
-  overflow: hidden;
-  background: var(--color-bg-overlay);
-  border-left: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: column;
-  transition: width var(--duration-slow) var(--ease-enter);
-  flex-shrink: 0;
-}
-.add-panel--open  { width: var(--width-inspector); visibility: visible; }
-.add-panel--closed { width: 0; visibility: hidden; }
-
-.add-panel__header,
 .add-panel__body,
 .add-panel__footer {
-  min-width: var(--width-inspector);
-}
-
-.add-panel__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-.add-panel__title {
-  font-size: var(--type-heading-2);
-  font-weight: var(--weight-semibold);
+  min-width: 0;
+  width: 100%;
 }
 .add-panel__divider {
   display: flex;

@@ -171,9 +171,6 @@ function buildMenuHTML(isMulti, torrent) {
     showPause      = !allPaused;
   }
 
-  const seqDl    = !isMulti && torrent?.seq_dl === true;
-  const seqLabel = 'Sequential Download' + (seqDl ? ' ✓' : '');
-
   const seedingStates = new Set(['uploading', 'forcedUP', 'stalledUP', 'pausedUP']);
   const selectedTorrents  = [...state.selected].map(h => state.torrents.get(h)).filter(t => t != null);
   const seedingTorrents   = selectedTorrents.filter(t => seedingStates.has(t.state));
@@ -201,7 +198,6 @@ function buildMenuHTML(isMulti, torrent) {
     SEP,
     menuItem('verify',     iconRefreshCw(14),  'Verify Local Data'),
     menuItem('reannounce', iconWifi(14),        'Reannounce'),
-    menuItem('sequential', iconListChecks(14),  seqLabel),
     superSeedingItems,
     SEP,
     queueEnabled ? menuItem('top',    iconSkipBack(14),    'Move to Top')    : '',
@@ -214,7 +210,6 @@ function buildMenuHTML(isMulti, torrent) {
     SEP,
     menuItem('set-location', iconFolderOpen(14), 'Set Location\u2026'),
     menuItem('rename',      iconEdit2(14),       'Rename\u2026', renameClass),
-    !isMulti ? menuItem('rename-folder', iconEdit2(14), 'Rename Folder\u2026') : '',
     SEP,
     menuItem('remove',      iconTrash2(14),      'Remove Torrent'),
   ].join('');
@@ -325,22 +320,11 @@ function handleAction(action, itemEl, id, selectedIds, torrent, isMulti) {
         await torrentResume(selectedIds);
       });
       break;
-    case 'sequential':
-      runAction(() => api('/torrents/toggleSequentialDownload', { body: 'hashes=' + selectedIds.join('|') }));
-      break;
     case 'super-seeding-start':
       runAction(() => torrentSetSuperSeeding(selectedIds, true));
       break;
     case 'super-seeding-stop':
       runAction(() => torrentSetSuperSeeding(selectedIds, false));
-      break;
-    case 'rename-folder':
-      if (!isMulti) {
-        closeMenu();
-        document.dispatchEvent(new CustomEvent('modal:rename-folder', {
-          detail: { id, torrent },
-        }));
-      }
       break;
     case 'verify':
       runAction(() => torrentRecheck(selectedIds));
@@ -386,17 +370,14 @@ function handleAction(action, itemEl, id, selectedIds, torrent, isMulti) {
         detail: { ids: selectedIds, deleteData: false },
       }));
       break;
+
     case 'show-details':
       closeMenu();
       setSelected(new Set([id]));
       {
-        const inspEl = document.getElementById('inspector');
-        const isOpen = inspEl && inspEl.classList.contains('inspector--open');
-        if (isOpen && state.inspectorId === id) {
-          setInspector(null);
-        } else {
-          setInspector(id);
-        }
+        const inspContent = document.getElementById('inspector-content');
+        const alreadyShowing = inspContent && !inspContent.hidden && state.inspectorId === id;
+        if (!alreadyShowing) setInspector(id);
       }
       break;
   }
