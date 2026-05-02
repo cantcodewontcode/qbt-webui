@@ -1,4 +1,8 @@
 
+function findEl(id, container) {
+  return container ? container.querySelector('#' + id) : document.getElementById(id);
+}
+
 let activeTab      = 'general';
 let selectedFiles  = new Set();
 
@@ -7,6 +11,8 @@ let inspectorInterval = null;
 let inspectorFiles    = [];
 let inspectorPeers    = {};
 let inspectorTrackers = [];
+
+let _mobileContainer = null;
 
 
 function renderStateBadge(t) {
@@ -62,13 +68,13 @@ function renderSeedLimits(t) {
   </div>`;
 }
 
-function wireGeneralControls(t) {
-  const dlLimited = document.getElementById('insp-dl-limited');
-  const dlLimit   = document.getElementById('insp-dl-limit');
-  const ulLimited = document.getElementById('insp-ul-limited');
-  const ulLimit   = document.getElementById('insp-ul-limit');
-  const rMode     = document.getElementById('insp-ratio-mode');
-  const rLimit    = document.getElementById('insp-ratio-limit');
+function wireGeneralControls(t, container) {
+  const dlLimited = findEl('insp-dl-limited', container);
+  const dlLimit   = findEl('insp-dl-limit', container);
+  const ulLimited = findEl('insp-ul-limited', container);
+  const ulLimit   = findEl('insp-ul-limit', container);
+  const rMode     = findEl('insp-ratio-mode', container);
+  const rLimit    = findEl('insp-ratio-limit', container);
 
   dlLimited?.addEventListener('change', () => {
     dlLimit.disabled = !dlLimited.checked;
@@ -120,7 +126,7 @@ function wireGeneralControls(t) {
   });
 }
 
-function renderGeneral(t) {
+function renderGeneral(t, container) {
   const props = t._props || {};
 
   const connected    = (t.num_leechs ?? 0) + (t.num_seeds ?? 0);
@@ -155,7 +161,7 @@ function renderGeneral(t) {
     ['ETA',            (() => {
       const sc = torrentStateClass(t);
       if (sc === 'state-finished') return '—';
-      if (sc === 'state-seeding' || sc === 'state-seeding-stalled') {
+      if (sc === 'state-seeding') {
         let limit = null;
         if ((t.ratio_limit ?? -2) >= 0) {
           limit = t.ratio_limit;
@@ -211,9 +217,9 @@ function renderGeneral(t) {
   html += renderSpeedLimits(t);
   html += renderSeedLimits(t);
 
-  document.getElementById('tab-general').innerHTML = html;
+  findEl('tab-general', container).innerHTML = html;
 
-  const copyBtn = document.getElementById('btn-copy-magnet');
+  const copyBtn = findEl('btn-copy-magnet', container);
   if (copyBtn) {
     copyBtn.addEventListener('click', () => {
       navigator.clipboard.writeText(t.magnet_uri).then(() => {
@@ -223,7 +229,7 @@ function renderGeneral(t) {
     });
   }
 
-  wireGeneralControls(t);
+  wireGeneralControls(t, container);
 }
 
 function updateFileRowSelection(fileList) {
@@ -234,12 +240,12 @@ function updateFileRowSelection(fileList) {
   });
 }
 
-function wireFileControls(t) {
-  const panel = document.getElementById('tab-files');
+function wireFileControls(t, panel) {
+  if (!panel) panel = document.getElementById('tab-files');
   if (!panel) return;
 
-  const searchInput = document.getElementById('file-search-input');
-  const searchClear = document.getElementById('file-search-clear');
+  const searchInput = panel.querySelector('#file-search-input');
+  const searchClear = panel.querySelector('#file-search-clear');
   const fileList    = panel.querySelector('.file-list');
 
   searchInput?.addEventListener('input', () => {
@@ -258,7 +264,7 @@ function wireFileControls(t) {
     fileList?.querySelectorAll('.file-row').forEach(row => {
       row.style.display = '';
     });
-    document.getElementById('file-search-input')?.focus();
+    panel.querySelector('#file-search-input')?.focus();
   });
 
   let lastClickedFileIndex = null;
@@ -306,7 +312,7 @@ function wireFileControls(t) {
       try {
         await torrentFilePriority(state.inspectorId, applyTo, val);
         inspectorFiles = await getTorrentFiles(state.inspectorId);
-        renderActiveTab();
+        renderActiveTab(_mobileContainer || undefined);
       } catch (err) {
         showToast('Failed to update priority: ' + err.message, 'error');
       }
@@ -314,8 +320,8 @@ function wireFileControls(t) {
   });
 }
 
-function renderFiles(files) {
-  const panel = document.getElementById('tab-files');
+function renderFiles(files, container) {
+  const panel = findEl('tab-files', container);
 
   if (!files || files.length === 0) {
     selectedFiles = new Set();
@@ -349,7 +355,7 @@ function renderFiles(files) {
   }
   // ── Full rebuild path (first render or file count changed) ────────
   selectedFiles = new Set();
-  const existingSearch = document.getElementById('file-search-input')?.value || '';
+  const existingSearch = panel.querySelector('#file-search-input')?.value || '';
   const searchHadFocus = document.activeElement?.id === 'file-search-input';
 
   const rows = files.map((file, i) => {
@@ -389,12 +395,12 @@ function renderFiles(files) {
 </div>`;
 
   panel.innerHTML = searchBar + `<div class="file-list">${rows}</div>`;
-  wireFileControls(null);
+  wireFileControls(null, panel);
 
   // Restore search state after re-render
   if (existingSearch) {
-    const searchInput = document.getElementById('file-search-input');
-    const searchClear = document.getElementById('file-search-clear');
+    const searchInput = panel.querySelector('#file-search-input');
+    const searchClear = panel.querySelector('#file-search-clear');
     const fileList    = panel.querySelector('.file-list');
     if (searchInput) searchInput.value = existingSearch;
     if (searchClear) searchClear.hidden = false;
@@ -406,7 +412,7 @@ function renderFiles(files) {
     });
   }
   if (searchHadFocus) {
-    const searchInput = document.getElementById('file-search-input');
+    const searchInput = panel.querySelector('#file-search-input');
     if (searchInput) {
       searchInput.focus();
       const len = searchInput.value.length;
@@ -415,10 +421,10 @@ function renderFiles(files) {
   }
 }
 
-function renderPeers() {
+function renderPeers(container) {
   const peers = Object.values(inspectorPeers);
   if (peers.length === 0) {
-    document.getElementById('tab-peers').innerHTML =
+    findEl('tab-peers', container).innerHTML =
       '<p class="inspector-empty">No peers connected.</p>';
     return;
   }
@@ -445,12 +451,12 @@ function renderPeers() {
   </div>`;
   }).join('');
 
-  document.getElementById('tab-peers').innerHTML = rows;
+  findEl('tab-peers', container).innerHTML = rows;
 }
 
-function renderTrackers() {
+function renderTrackers(container) {
   if (!inspectorTrackers || inspectorTrackers.length === 0) {
-    document.getElementById('tab-trackers').innerHTML =
+    findEl('tab-trackers', container).innerHTML =
       '<p class="inspector-empty">No trackers.</p>';
     return;
   }
@@ -486,30 +492,30 @@ function renderTrackers() {
   </div>`;
   }).join('');
 
-  document.getElementById('tab-trackers').innerHTML = html;
+  findEl('tab-trackers', container).innerHTML = html;
 
-  document.getElementById('btn-reannounce-all')?.addEventListener('click', async () => {
+  findEl('btn-reannounce-all', container)?.addEventListener('click', async () => {
     if (state.inspectorId) await torrentReannounce([state.inspectorId]);
   });
 }
 
-function renderTab(tab) {
+function renderTab(tab, container) {
   if (state.inspectorId === null) return;
   const t = state.torrents.get(state.inspectorId);
   if (!t) return;
   switch (tab) {
-    case 'general':  renderGeneral(t);       break;
-    case 'files':    renderFiles(inspectorFiles); break;
-    case 'peers':    renderPeers();          break;
-    case 'trackers': renderTrackers();       break;
+    case 'general':  renderGeneral(t, container);           break;
+    case 'files':    renderFiles(inspectorFiles, container); break;
+    case 'peers':    renderPeers(container);                break;
+    case 'trackers': renderTrackers(container);             break;
   }
 }
 
-function renderActiveTab() {
-  renderTab(activeTab);
+function renderActiveTab(container) {
+  renderTab(activeTab, container);
 }
 
-async function _refreshActiveTab(hash, tab) {
+async function _refreshActiveTab(hash, tab, container) {
   try {
     if (tab === 'peers') {
       const peersData = await getTorrentPeers(hash, inspectorPeerRid);
@@ -527,26 +533,28 @@ async function _refreshActiveTab(hash, tab) {
     }
     // General tab re-renders from torrents:changed — no fetch needed
   } catch (_) {}
-  if (state.inspectorId === hash && activeTab === tab) renderTab(tab);
+  if (state.inspectorId === hash && activeTab === tab) renderTab(tab, container);
 }
 
-function setActiveTab(tab) {
+function setActiveTab(tab, container) {
   activeTab = tab;
 
-  document.querySelectorAll('.inspector-tab').forEach(btn => {
+  const root = container || document;
+  root.querySelectorAll('.inspector-tab').forEach(btn => {
     const active = btn.dataset.tab === tab;
     btn.classList.toggle('inspector-tab--active', active);
     btn.setAttribute('aria-selected', String(active));
   });
 
-  document.querySelectorAll('.inspector-panel').forEach(p => {
+  root.querySelectorAll('.inspector-panel').forEach(p => {
     p.classList.add('inspector-panel--hidden');
   });
-  document.getElementById(`tab-${tab}`)?.classList.remove('inspector-panel--hidden');
+  (container ? container.querySelector('#tab-' + tab)
+             : document.getElementById('tab-' + tab))
+    ?.classList.remove('inspector-panel--hidden');
 
-  // Render immediately with cached data, then refresh in the background
-  renderTab(tab);
-  if (state.inspectorId) _refreshActiveTab(state.inspectorId, tab);
+  renderTab(tab, container);
+  if (state.inspectorId) _refreshActiveTab(state.inspectorId, tab, container);
 }
 
 function closeInspectorSilent() {
@@ -575,6 +583,75 @@ function mountInspector() {
       clearInterval(inspectorInterval);
       inspectorInterval = null;
     }
+
+    // ── Mobile: use option sheet ────────────────────────────────
+    if (window.innerWidth < 640) {
+      if (!hash) {
+        closeOptionSheet();
+        return;
+      }
+
+      const torrent = state.torrents.get(hash);
+
+      openOptionSheet({
+        title: torrent?.name || '—',
+        buildContent: async (body) => {
+          _mobileContainer = body;
+          body.innerHTML = `
+            <div style="display:flex;flex-direction:column;height:100%;min-height:0;">
+              <nav style="display:flex;border-bottom:1px solid var(--color-border);flex-shrink:0;">
+                <button class="inspector-tab inspector-tab--active" role="tab" aria-selected="true"  data-tab="general"  style="flex:1;height:44px;min-width:0;font-size:13px;">General</button>
+                <button class="inspector-tab"                       role="tab" aria-selected="false" data-tab="files"    style="flex:1;height:44px;min-width:0;font-size:13px;">Files</button>
+                <button class="inspector-tab"                       role="tab" aria-selected="false" data-tab="peers"    style="flex:1;height:44px;min-width:0;font-size:13px;">Peers</button>
+                <button class="inspector-tab"                       role="tab" aria-selected="false" data-tab="trackers" style="flex:1;height:44px;min-width:0;font-size:13px;">Trackers</button>
+              </nav>
+              <div id="tab-general"   class="inspector-panel"                style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:var(--space-2) var(--space-4);"></div>
+              <div id="tab-files"     class="inspector-panel inspector-panel--hidden" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:0;"></div>
+              <div id="tab-peers"     class="inspector-panel inspector-panel--hidden" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:var(--space-2) var(--space-4);"></div>
+              <div id="tab-trackers"  class="inspector-panel inspector-panel--hidden" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:var(--space-2) var(--space-4);"></div>
+            </div>`;
+
+          body.querySelectorAll('.inspector-tab').forEach(btn => {
+            btn.addEventListener('click', () => setActiveTab(btn.dataset.tab, body));
+          });
+
+          inspectorPeerRid = 0; inspectorFiles = []; inspectorPeers = {}; inspectorTrackers = [];
+          const activePanel = body.querySelector('#tab-general');
+          if (activePanel) activePanel.innerHTML = '<p class="inspector-empty">Loading…</p>';
+
+          const [propsResult, filesResult, peersResult, trackersResult] = await Promise.allSettled([
+            getTorrentProperties(hash),
+            getTorrentFiles(hash),
+            getTorrentPeers(hash, 0),
+            getTorrentTrackers(hash),
+          ]);
+
+          if (filesResult.status    === 'fulfilled') inspectorFiles    = filesResult.value;
+          if (peersResult.status    === 'fulfilled') { inspectorPeerRid = peersResult.value.rid ?? 0; inspectorPeers = peersResult.value.peers ?? {}; }
+          if (trackersResult.status === 'fulfilled') inspectorTrackers = trackersResult.value;
+          if (propsResult.status    === 'fulfilled') {
+            const t = state.torrents.get(hash);
+            if (t) state.torrents.set(hash, { ...t, ...propsResult.value, _props: propsResult.value });
+          }
+
+          if (state.inspectorId === hash) setActiveTab(activeTab, body);
+
+          inspectorInterval = setInterval(async () => {
+            if (!state.inspectorId) return;
+            await _refreshActiveTab(state.inspectorId, activeTab, body);
+          }, 3000);
+        },
+        onClose: () => {
+          if (inspectorInterval) { clearInterval(inspectorInterval); inspectorInterval = null; }
+          state.inspectorId = null;
+          _mobileContainer = null;
+          inspectorPeerRid = 0; inspectorFiles = []; inspectorPeers = {}; inspectorTrackers = [];
+        },
+      });
+
+      return; // ← skip desktop path entirely
+    }
+    // ── Desktop path continues below unchanged ──────────────────
 
     const rightPanel      = document.getElementById('right-panel');
     const inspContent     = document.getElementById('inspector-content');
@@ -652,12 +729,13 @@ function mountInspector() {
     if (state.inspectorId === null) return;
     const t = state.torrents.get(state.inspectorId);
     if (!t) return;
-    const titleEl = document.getElementById('inspector-title');
+    const titleEl = _mobileContainer
+      ? document.querySelector('#sort-sheet .sort-sheet__title')
+      : document.getElementById('inspector-title');
     if (titleEl) titleEl.textContent = t.name || '—';
     // Files tab data comes from getTorrentFiles, not torrents:changed — skip it
     if (activeTab === 'files') return;
     if (activeTab === 'general' && !t._props) return;
-    renderTab(activeTab);
+    renderTab(activeTab, _mobileContainer || undefined);
   });
 }
-

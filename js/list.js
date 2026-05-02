@@ -34,6 +34,7 @@ const FILTER_MAP = {
     return ratioMet || timeMet;
   },
   checking:    t => ['checkingDL', 'checkingUP', 'checkingResumeData'].includes(t.state),
+  moving:      t => t.state === 'moving',
   active:      t => (t.dlspeed ?? 0) > 0 || (t.upspeed ?? 0) > 0,
   inactive:    t => (t.dlspeed ?? 0) === 0 && (t.upspeed ?? 0) === 0,
   stalled:     t => t.state === 'stalledDL',
@@ -65,11 +66,6 @@ function applyFilter(torrents, filter, search) {
 function applySort(arr, key, dir) {
   const mult = dir === 'asc' ? 1 : -1;
 
-  function etaVal(t) {
-    const v = t.eta ?? -1;
-    return v < 0 ? Number.MAX_SAFE_INTEGER : v;
-  }
-
   function byName(a, b) {
     return (a.name || '').localeCompare(b.name || '');
   }
@@ -82,9 +78,15 @@ function applySort(arr, key, dir) {
     let av, bv, primary;
 
     if (key === 'eta') {
-      av = etaVal(a);
-      bv = etaVal(b);
-      primary = av === bv ? 0 : mult * (av - bv);
+      const aRaw = a.eta ?? -1;
+      const bRaw = b.eta ?? -1;
+      const aSentinel = aRaw < 0;
+      const bSentinel = bRaw < 0;
+      // Sentinels always go to the bottom regardless of sort direction
+      if (aSentinel && bSentinel) return 0;
+      if (aSentinel) return 1;
+      if (bSentinel) return -1;
+      primary = mult * (aRaw - bRaw);
     } else if (key === 'num_connected') {
       av = connectedVal(a);
       bv = connectedVal(b);

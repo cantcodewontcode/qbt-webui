@@ -61,6 +61,8 @@ function renderRow(torrent, isSelected) {
   let pct = (torrent.progress || 0) * 100;
   if (stateClass === 'state-checking') {
     pct = (torrent.progress || 0) * 100;
+  } else if (stateClass === 'state-moving') {
+    pct = 100;
   } else if (stateClass === 'state-seeding') {
     // ratio_limit >= 0  → per-torrent limit
     // ratio_limit === -1 → use global (state.prefs.max_ratio if enabled)
@@ -112,17 +114,36 @@ function renderRow(torrent, isSelected) {
   const numLeechs  = torrent.num_leechs ?? 0;
   const numSeeds   = torrent.num_seeds  ?? 0;
   let peerLine = '';
-  if (stateClass === 'state-downloading' && connected > 0) {
+  const isStalledDL = torrent.state === 'stalledDL';
+  const isFetching  = torrent.state === 'metaDL';
+  const isChecking  = stateClass === 'state-checking';
+  const isMoving    = stateClass === 'state-moving';
+
+  if (isMoving) {
+    peerLine = `<span class="row-peer-inline">Moving files…</span>`;
+  } else if (isChecking) {
+    const pct = ((torrent.progress || 0) * 100).toFixed(1).replace('.0', '');
+    peerLine = `<span class="row-peer-inline">Checking torrent (${pct}% done)</span>`;
+  } else if (isFetching) {
+    const fetchPct = torrent.progress > 0
+      ? ` (${((torrent.progress) * 100).toFixed(0)}%)`
+      : '';
+    peerLine = `<span class="row-peer-inline">Fetching torrent metadata${fetchPct}</span>`;
+  } else if (stateClass === 'state-downloading' && connected > 0) {
     peerLine = `<span class="row-peer-inline">Downloading from ${numSeeds} of ${connected} peers</span>`;
-  } else if ((stateClass === 'state-seeding' || stateClass === 'state-seeding-stalled') && torrent.super_seeding) {
+  } else if (isStalledDL && connected > 0) {
+    peerLine = `<span class="row-peer-inline row-peer-warn">Downloading from 0 of ${connected} peers</span>`;
+  } else if (isStalledDL && connected === 0) {
+    peerLine = `<span class="row-peer-inline row-peer-warn">Downloading, no peers available</span>`;
+  } else if (stateClass === 'state-seeding' && torrent.super_seeding) {
     if (connected > 0) {
       peerLine = `<span class="row-peer-inline row-peer-inline--super">
-    ${iconSuperSeeding(13)}Super Seeding to ${numLeechs} of ${connected} peers
-  </span>`;
+  ${iconSuperSeeding(13)}Super Seeding to ${numLeechs} of ${connected} peers
+</span>`;
     } else {
       peerLine = `<span class="row-peer-inline row-peer-inline--super">
-    ${iconSuperSeeding(13)}Super Seeding
-  </span>`;
+  ${iconSuperSeeding(13)}Super Seeding
+</span>`;
     }
   } else if (stateClass === 'state-seeding' && connected > 0) {
     peerLine = `<span class="row-peer-inline">Seeding to ${numLeechs} of ${connected} peers</span>`;

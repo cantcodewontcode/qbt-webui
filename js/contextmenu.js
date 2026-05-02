@@ -170,6 +170,10 @@ function buildMenuHTML(isMulti, torrent) {
 
   const seedingStates = new Set(['uploading', 'forcedUP', 'stalledUP', 'pausedUP']);
   const selectedTorrents  = [...state.selected].map(h => state.torrents.get(h)).filter(t => t != null);
+  const checkingStates = new Set(['checkingDL', 'checkingUP', 'checkingResumeData', 'moving']);
+  const showVerify = isMulti
+    ? !selectedTorrents.every(t => checkingStates.has(t.state))
+    : !(torrent && checkingStates.has(torrent.state));
   const seedingTorrents   = selectedTorrents.filter(t => seedingStates.has(t.state));
   const anySeeding        = seedingTorrents.length > 0;
   const allSuperSeeding   = anySeeding && seedingTorrents.every(t => t.super_seeding);
@@ -192,7 +196,7 @@ function buildMenuHTML(isMulti, torrent) {
     SEP,
     !isMulti ? menuItem('show-details', iconInfo(14), 'Show Details') : '',
     !isMulti ? SEP : '',
-    menuItem('verify',     iconRefreshCw(14),  'Verify Local Data'),
+    showVerify ? menuItem('verify', iconRefreshCw(14), 'Verify Local Data') : '',
     menuItem('reannounce', iconWifi(14),        'Reannounce'),
     superSeedingItems,
     SEP,
@@ -201,7 +205,7 @@ function buildMenuHTML(isMulti, torrent) {
     queueEnabled ? menuItem('down',   iconChevronDown(14), 'Move Down')      : '',
     queueEnabled ? menuItem('bottom', iconSkipForward(14), 'Move to Bottom') : '',
     queueEnabled ? SEP : '',
-    menuItemSubmenu('queue-priority', iconTag(14), 'Queue Priority'),
+    queueEnabled ? menuItemSubmenu('queue-priority', iconTag(14), 'Queue Priority') : '',
     menuItem('seed-ratio',  iconInfo(14),        'Set Seed Ratio\u2026'),
     SEP,
     menuItem('set-location', iconFolderOpen(14), 'Set Location\u2026'),
@@ -325,12 +329,26 @@ function handleAction(action, itemEl, id, selectedIds, torrent, isMulti) {
     case 'super-seeding-stop':
       runAction(() => torrentSetSuperSeeding(selectedIds, false));
       break;
-    case 'verify':
-      runAction(() => torrentRecheck(selectedIds));
+    case 'verify': {
+      const verifyName = !isMulti && torrent?.name
+        ? `"${torrent.name}"`
+        : `${selectedIds.length} torrent${selectedIds.length > 1 ? 's' : ''}`;
+      runAction(async () => {
+        await torrentRecheck(selectedIds);
+        showToast(`Verifying ${verifyName}…`, 'info');
+      });
       break;
-    case 'reannounce':
-      runAction(() => torrentReannounce(selectedIds));
+    }
+    case 'reannounce': {
+      const reannName = !isMulti && torrent?.name
+        ? `"${torrent.name}"`
+        : `${selectedIds.length} torrent${selectedIds.length > 1 ? 's' : ''}`;
+      runAction(async () => {
+        await torrentReannounce(selectedIds);
+        showToast(`Reannouncing ${reannName}…`, 'info');
+      });
       break;
+    }
     case 'top':
       runAction(() => queueMoveTop(selectedIds));
       break;

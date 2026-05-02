@@ -48,6 +48,7 @@ function mountFilterTabs() {
     setCount('count-finished',    FILTER_MAP.finished);
     setCount('count-errors',      FILTER_MAP.errors);
     setCount('count-checking',    FILTER_MAP.checking);
+    setCount('count-moving',      FILTER_MAP.moving);
     setCount('count-stalled',     FILTER_MAP.stalled);
   });
 }

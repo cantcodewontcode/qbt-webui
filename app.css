@@ -181,6 +181,11 @@ html, body {
   height: 100%;
 }
 
+html.sheet-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
 body {
   font-family: var(--font-ui);
   font-size: var(--type-body);
@@ -655,8 +660,8 @@ a:hover {
 /* State-specific inline progress fill colors */
 .state-downloading .row-progress-inline__fill { background: var(--color-info); }
 .state-seeding     .row-progress-inline__fill { background: var(--color-success); }
-.state-seeding-stalled .row-progress-inline__fill { background: var(--color-success); opacity: 0.5; }
-.state-checking    .row-progress-inline__fill { background: var(--color-info); }
+.state-checking    .row-progress-inline__fill,
+.state-moving      .row-progress-inline__fill { background: var(--color-info); }
 .state-queued      .row-progress-inline__fill { background: var(--color-border-strong); }
 .state-error       .row-progress-inline__fill { background: var(--color-critical); }
 .state-missing     .row-progress-inline__fill { background: var(--color-critical); }
@@ -683,7 +688,8 @@ a:hover {
   to   { background-position: 28px 0; }
 }
 
-.state-checking .row-progress-inline__fill {
+.state-checking .row-progress-inline__fill,
+.state-moving   .row-progress-inline__fill {
   background-image: repeating-linear-gradient(
     45deg,
     var(--color-info) 0px,
@@ -1183,6 +1189,8 @@ dialog[open] {
 }
 
 .form-input {
+  flex: 1;
+  min-width: 0;
   height: 32px;
   background: var(--color-bg-inset);
   border: 1px solid var(--color-border);
@@ -1199,6 +1207,10 @@ dialog[open] {
   outline: none;
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px var(--color-accent-subtle);
+}
+
+#modal-set-location .form-label {
+  width: auto;
 }
 
 .modal-desc {
@@ -1433,6 +1445,35 @@ dialog[open] {
   max-width: 600px;
 }
 
+/* ── Settings: two-column seeding grid ─────────────────────────── */
+.settings-rows-grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.settings-grid-label {
+  font-size: var(--type-body-sm);
+  color: var(--color-text-primary);
+  align-self: center;
+}
+.settings-grid-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+.settings-grid-input {
+  width: 70px;
+}
+.settings-grid-unit {
+  font-size: var(--type-body-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
 .settings-note {
   font-size: var(--type-caption);
   color: var(--color-text-secondary);
@@ -1513,6 +1554,7 @@ dialog[open] {
   padding: var(--space-2) var(--space-4);
   min-width: 280px;
   max-width: 320px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -1529,7 +1571,15 @@ dialog[open] {
 .toast--success .toast-icon { color: var(--color-success); }
 .toast--error   .toast-icon { color: var(--color-critical); }
 
-.toast__message { flex: 1; }
+.toast__message {
+  flex: 1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: ellipsis;
+  word-break: break-word;
+}
 
 
 
@@ -1549,7 +1599,6 @@ dialog[open] {
 
 .state-badge--downloading { background: color-mix(in srgb, var(--color-info)     15%, transparent); color: var(--color-info); }
 .state-badge--seeding     { background: color-mix(in srgb, var(--color-success)  15%, transparent); color: var(--color-success); }
-.state-badge--seeding-stalled { background: color-mix(in srgb, var(--color-success) 10%, transparent); color: var(--color-success); opacity: 0.7; }
 .state-badge--paused      { background: var(--color-bg-inset); color: var(--color-text-secondary); }
 .state-badge--queued      { background: var(--color-bg-inset); color: var(--color-text-secondary); }
 .state-badge--checking    { background: color-mix(in srgb, var(--color-info)     15%, transparent); color: var(--color-info); }
@@ -1703,7 +1752,7 @@ dialog[open] {
 .info-row {
   display: flex;
   gap: var(--space-4);
-  padding: var(--space-2) 0;
+  padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--color-border-subtle);
   font-size: var(--type-body-sm);
 }
@@ -2347,10 +2396,32 @@ dialog[open] {
   border-bottom: 1px solid var(--color-border);
   flex-shrink: 0;
 }
-.settings-nav-compact select {
+.settings-nav-compact select,
+#settings-section-select {
   flex: 1;
   height: 28px;
   font-size: var(--type-body-sm);
+  background: var(--color-bg-inset);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-none);
+  padding: 0 var(--space-3);
+  font-family: var(--font-ui);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-2) center;
+  padding-right: calc(var(--space-2) + 16px);
+  transition: border-color var(--duration-fast) var(--ease-default),
+              box-shadow var(--duration-fast) var(--ease-default);
+}
+.settings-nav-compact select:focus,
+#settings-section-select:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-subtle);
 }
 .settings-nav-label {
   font-size: var(--type-label);
@@ -2407,6 +2478,49 @@ dialog[open] {
 }
 .port-test-result.is-open   { color: var(--color-success); }
 .port-test-result.is-closed { color: var(--color-critical); }
+
+/* ── Settings: group title with inline toggle ───────────────────── */
+.settings-group-title--with-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Global: suppress number input spinners ─────────────────────── */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* ── About section: system stats ────────────────────────────────── */
+.about-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.about-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--type-body-sm);
+}
+.about-stat-label {
+  color: var(--color-text-secondary);
+}
+.about-stat-value {
+  font-family: var(--font-data);
+  color: var(--color-text-primary);
+}
+.about-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-4) 0;
+}
 
 
 /* ── §31  Add Torrent Panel ─────────────────────────────────────── */
@@ -2514,5 +2628,678 @@ dialog[open] {
   color: var(--color-accent);
   background: var(--color-accent-subtle);
   border-left-color: var(--color-accent);
+}
+
+
+/* ── §35  Mobile Breakpoints (< 640px) ──────────────────────────── */
+
+/* ── Mobile structural tokens ─────────────────────────────────────
+   Added as custom properties on :root so JS can read them if needed */
+@media (max-width: 639px) {
+  :root {
+    --height-toolbar-row: 48px;       /* each toolbar row height */
+    --height-filter-strip: 40px;      /* mobile chip strip */
+    --height-chrome-mobile: 88px;     /* toolbar + filter strip */
+  }
+}
+
+
+/* ── Desktop: hide mobile-only elements ──────────────────────────── */
+#mobile-filter-strip {
+  display: none;
+}
+
+.mobile-sort-btn {
+  display: none;
+}
+
+#mobile-filter-actions {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .tablet-sidebar-toggle {
+    display: none;
+  }
+}
+
+@media (max-width: 639px) {
+  .tablet-sidebar-toggle {
+    display: none;
+  }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════
+   MOBILE — max-width: 639px
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 639px) {
+
+  /* ── App shell ────────────────────────────────────────────────── */
+
+  #app {
+    /* Prevent any horizontal scroll at the app level */
+    overflow-x: hidden;
+  }
+
+  /* ── Toolbar — two-row layout ─────────────────────────────────── */
+
+  #toolbar {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 0 var(--space-3);
+    row-gap: 0;
+    align-items: stretch;
+    /* Two rows: [left + right controls] / [search] */
+  }
+
+  .toolbar__left {
+    position: static;
+    transform: none;
+    order: 1;
+    height: var(--height-toolbar-row);
+    display: flex;
+    align-items: center;
+  }
+
+  .toolbar__right {
+    order: 2;
+    height: var(--height-toolbar-row);
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    gap: var(--space-1);
+  }
+
+  .toolbar__center {
+    order: 3;
+    flex-basis: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding-bottom: var(--space-2);
+  }
+
+  .toolbar__center .search-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Add Torrent: icon-only on mobile — hide the label text */
+  #btn-add-torrent .btn-label {
+    display: none;
+  }
+
+  #btn-add-torrent {
+    /* Override to match ghost icon button footprint */
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Hide from toolbar row 1 on mobile — moved to filter strip */
+  .mobile-sort-btn,
+  .toolbar__divider,
+  #btn-settings,
+  #btn-add-torrent {
+    display: none;
+  }
+
+  /* Speed readouts — tighten spacing */
+  .speed-readout {
+    gap: var(--space-1);
+    padding: 0 var(--space-1);
+  }
+
+  /* Alt speed button — smaller target is fine, it's an indicator */
+  .alt-speed-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* ── Sidebar — hidden on mobile ───────────────────────────────── */
+
+  #sidebar {
+    display: none;
+  }
+
+  /* ── Mobile filter chip strip ─────────────────────────────────── */
+
+  #mobile-filter-strip {
+    display: block;
+    flex-shrink: 0;
+    height: var(--height-filter-strip);
+    background: var(--color-bg-surface);
+    border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #mobile-filter-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  #mobile-filter-chips {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+    height: 100%;
+    white-space: nowrap;
+  }
+
+  #mobile-filter-chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  #mobile-filter-actions {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    height: 100%;
+    gap: 0;
+  }
+
+  #mobile-filter-actions .btn-ghost {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .mobile-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    height: 26px;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--color-border);
+    background: transparent;
+    font-family: var(--font-ui);
+    font-size: var(--type-caption);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition:
+      background var(--duration-fast) var(--ease-default),
+      border-color var(--duration-fast) var(--ease-default),
+      color var(--duration-fast) var(--ease-default);
+  }
+
+  .mobile-chip:hover {
+    background: var(--color-bg-inset);
+    color: var(--color-text-primary);
+  }
+
+  .mobile-chip--active {
+    background: var(--color-accent-subtle);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .mobile-chip__count {
+    font-family: var(--font-data);
+    font-size: var(--type-data-sm);
+    font-weight: var(--weight-regular);
+    color: inherit;
+    opacity: 0.75;
+  }
+
+  /* ── Main area — vertical stack on mobile ─────────────────────── */
+
+  #main-area {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── List area — full width ───────────────────────────────────── */
+
+  #list-area {
+    flex: 1;
+    overflow: hidden;
+    min-width: 0;
+  }
+
+  /* ── Column headers — hidden on mobile ───────────────────────── */
+  /* Columns are replaced by the sort bottom sheet (Phase 3) */
+
+  #col-headers {
+    display: none;
+  }
+
+  /* ── Torrent rows — hide non-essential columns ────────────────── */
+
+  .col-size,
+  .col-dl,
+  .col-ul,
+  .col-peers,
+  .col-ratio,
+  .col-eta,
+  .col-pct {
+    display: none;
+  }
+
+  /* Name column takes all width */
+  .col-name {
+    width: 100%;
+    max-width: 100%;
+    padding: var(--space-2) var(--space-3);
+  }
+
+  /* Row height spec says 104px regardless of breakpoint (DESIGN_SYSTEM §10) */
+  .torrent-row {
+    height: var(--height-row); /* 104px — locked per spec */
+  }
+
+  /* Right panel replaced by option sheet on mobile */
+  #right-panel {
+    display: none !important;
+  }
+
+  /* ── Modals — full-width on mobile ────────────────────────────── */
+
+  dialog {
+    width: calc(100vw - var(--space-6));
+    max-width: 100%;
+    margin: auto var(--space-3);
+  }
+
+  /* ── Context menu — ensure it doesn't overflow on narrow screens  */
+
+  .context-menu {
+    max-width: calc(100vw - var(--space-6));
+  }
+
+  /* ── Toast — full-width on mobile ─────────────────────────────── */
+
+  .toast-container {
+    left: var(--space-3);
+    right: var(--space-3);
+    bottom: var(--space-4);
+    max-width: 100%;
+  }
+
+  .toast {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Ensure hidden chips are truly hidden despite display: inline-flex */
+  #mobile-filter-chips .mobile-chip[hidden] {
+    display: none !important;
+  }
+
+  /* Row sub-line wraps instead of overflowing */
+  .row-sub-line {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .row-transfer-dl,
+  .row-transfer-ul,
+  .row-peer-inline {
+    white-space: nowrap;
+  }
+
+  #list-viewport .torrent-row {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Fix progress bar right-edge bleed */
+  .row-progress-inline {
+    width: auto;
+    align-self: stretch;
+  }
+
+  /* Prevent iOS auto-zoom on input focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Log is a power-user feature — omitted from mobile toolbar */
+  #btn-log {
+    display: none;
+  }
+
+} /* end @media (max-width: 639px) */
+
+
+/* ══════════════════════════════════════════════════════════════════
+   TABLET — 640px to 1023px
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 640px) and (max-width: 1023px) {
+
+  /* Sidebar hidden by default on tablet; toggled via JS in Phase 2 */
+  #sidebar {
+    display: none;
+  }
+
+  #sidebar.sidebar--visible {
+    display: flex;
+    flex-direction: column;
+    /* Sidebar overlays the list on tablet rather than pushing it */
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    z-index: var(--z-overlay);
+    background: var(--color-bg-surface);
+    border-right: 1px solid var(--color-border);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Inspector slides over the list rather than beside it */
+  #right-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    width: min(360px, 100%);
+    z-index: var(--z-overlay);
+    background: var(--color-bg-overlay);
+    border-left: 1px solid var(--color-border);
+    transform: translateX(100%);
+    transition: transform var(--duration-slow) var(--ease-enter);
+  }
+
+  #right-panel.right-panel--open {
+    transform: translateX(0);
+  }
+
+  /* Make #main-area the positioning context */
+  #main-area {
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Hamburger button — visible on tablet only */
+  .tablet-sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+} /* end @media tablet */
+
+
+/* ── §36  Sort Bottom Sheet ─────────────────────────────────────── */
+
+/* Backdrop */
+.sort-sheet-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-modal) - 1);
+  background: rgba(30, 26, 21, 0.35); /* warm-800 at 35% — scrim, not a surface */
+}
+
+.sort-sheet-backdrop--hidden {
+  display: none;
+}
+
+.sort-sheet-backdrop--visible {
+  display: block;
+}
+
+/* Sheet */
+.sort-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-modal);
+  background: var(--color-bg-overlay);
+  border-top-left-radius:  var(--radius-lg);
+  border-top-right-radius: var(--radius-lg);
+  border-top:   1px solid var(--color-border);
+  border-left:  1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(100%);
+  transition:
+    transform var(--duration-slow) var(--ease-exit),
+    visibility 0ms var(--duration-slow);
+  visibility: hidden;
+  height: 75vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.sort-sheet--visible {
+  transform: translateY(0);
+  transition:
+    transform var(--duration-slow) var(--ease-enter),
+    visibility 0ms 0ms;
+  visibility: visible;
+}
+
+/* Header */
+.sort-sheet__header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  min-height: 52px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  flex-shrink: 0;
+  touch-action: none;
+  cursor: grab;
+}
+
+.sort-sheet__header::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  position: absolute;
+  top: var(--space-2);
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.sort-sheet__title {
+  font-size: var(--type-heading-3);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  font-family: var(--font-ui);
+  letter-spacing: 0.01em;
+}
+
+/* Body */
+.sort-sheet__body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  overscroll-behavior: contain;
+  transition: height var(--duration-default) var(--ease-default);
+}
+
+/* Sort option rows */
+.sort-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 48px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.sort-option:hover,
+.sort-option:focus-visible {
+  background: var(--color-bg-inset);
+  outline: none;
+}
+
+.sort-option:active {
+  background: var(--color-accent-subtle);
+}
+
+.sort-option--active {
+  color: var(--color-accent);
+}
+
+.sort-option__dir {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-family: var(--font-data);
+  font-size: var(--type-data-sm);
+  color: var(--color-accent);
+}
+
+.sort-option__dir svg {
+  display: block;
+}
+
+.sort-group-label {
+  display: block;
+  font-size: var(--type-caption);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  letter-spacing: 0.02em;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-family: var(--font-ui);
+}
+
+.sort-group-sep {
+  height: 1px;
+  background: var(--color-border-subtle);
+  margin: var(--space-2) 0;
+}
+
+/* Desktop: sheet never shown */
+@media (min-width: 640px) {
+  .sort-sheet,
+  .sort-sheet-backdrop {
+    display: none !important;
+  }
+}
+
+/* ── §37  Action Sheet Items ────────────────────────────────────── */
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  height: 52px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-ui);
+  font-size: var(--type-body);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.action-item:active {
+  background: var(--color-bg-inset);
+}
+
+.action-item .icon {
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+  width: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-item--destructive {
+  color: var(--color-critical);
+}
+
+.action-item--destructive .icon {
+  color: var(--color-critical);
+}
+
+/* ── Log toolbar (filter chips + search) ──────────────────────── */
+.log-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  flex-shrink: 0;
+}
+
+.log-filter-chips {
+  display: flex;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+}
+
+.log-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption);
+  font-family: var(--font-ui);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default),
+              border-color var(--duration-fast) var(--ease-default);
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.log-chip:hover {
+  background: var(--color-bg-inset);
+  color: var(--color-text-primary);
+  border-color: var(--color-border-strong);
+}
+
+.log-chip--active {
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  border-color: var(--color-accent);
+}
+
+.log-chip--active:hover {
+  background: var(--color-accent-hover);
+}
+
+.log-search-bar {
+  padding: 0;
+  border-bottom: none;
+  position: static;
+  background: transparent;
+  z-index: auto;
 }
 

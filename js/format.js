@@ -2,6 +2,7 @@
 function formatSpeed(bytesPerSec) {
   if (!bytesPerSec || bytesPerSec <= 0) return '—';
   const bps = bytesPerSec * 8;
+  if (bps < 1000)          return Math.round(bps) + ' bps';
   if (bps < 1_000_000)     return Math.round(bps / 1000) + ' Kbps';
   if (bps < 1_000_000_000) return (bps / 1_000_000).toFixed(1) + ' Mbps';
   return (bps / 1_000_000_000).toFixed(2) + ' Gbps';
@@ -17,27 +18,18 @@ function formatSize(bytes) {
 }
 
 function formatETA(seconds) {
-  if (seconds < 0) return '∞';
+  if (seconds < 0) return '—';
   if (seconds === 0) return 'Done';
   if (seconds < 60) return seconds + 's';
-  if (seconds < 3600) {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    if (m > 10) return m + 'm';
-    return m + 'm ' + s + 's';
-  }
-  if (seconds < 86400) {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    return h + 'h ' + m + 'm';
-  }
+  if (seconds < 3600) return Math.floor(seconds / 60) + 'm';
+  if (seconds < 86400) return Math.floor(seconds / 3600) + 'h';
   const d = Math.floor(seconds / 86400);
-  const h = Math.floor((seconds % 86400) / 3600);
-  return d + 'd ' + h + 'h';
+  if (d > 99) return '>99d';
+  return d + 'd';
 }
 
 function formatRatio(ratio) {
-  if (ratio < 0) return '∞';
+  if (ratio < 0 || ratio >= 9999) return '—';
   if (ratio === 0) return '0.00';
   return ratio.toFixed(2);
 }
@@ -88,8 +80,9 @@ function torrentStateClass(torrent) {
     case 'checkingDL':
     case 'checkingUP':
     case 'checkingResumeData':
-    case 'moving':
       return 'state-checking';
+    case 'moving':
+      return 'state-moving';
     case 'pausedDL':
       return 'state-paused';
     case 'pausedUP':
@@ -99,9 +92,8 @@ function torrentStateClass(torrent) {
       return 'state-queued';
     case 'uploading':
     case 'forcedUP':
-      return 'state-seeding';
     case 'stalledUP':
-      return 'state-seeding-stalled';
+      return 'state-seeding';
     default:
       return 'state-paused';
   }
@@ -114,13 +106,13 @@ function torrentStateLabel(torrent) {
     case 'state-missing':     return 'Missing files';
     case 'state-metadata':    return 'Getting metadata';
     case 'state-checking':    return 'Checking';
+    case 'state-moving':      return 'Moving';
     case 'state-stalled':     return 'Stalled';
     case 'state-paused':      return 'Paused';
     case 'state-finished':    return 'Finished';
     case 'state-queued':      return 'Queued';
     case 'state-downloading': return 'Downloading';
     case 'state-seeding':         return 'Seeding';
-    case 'state-seeding-stalled': return 'Stalled';
     default:                  return 'Unknown';
   }
 }

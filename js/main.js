@@ -23,9 +23,12 @@ function injectStaticIcons() {
     'icon--settings':     () => iconSettings(16),
     'icon--plus':         () => iconPlus(14),
     'icon--file':         () => iconFile(16),
-    'icon--log':          () => iconListChecks(16),
-    'icon--refresh-cw':   () => iconRefreshCw(14),
+    'icon--log':          () => iconFileText(16),
+    'icon--refresh-cw':   () => iconArrowsClockwise(14),
+    'icon--log-search':   () => iconSearch(14),
     'icon--moon':         () => iconMoon(14),
+    'icon--sort':         () => iconArrowUpDown(16),
+    'icon--menu':         () => iconMenu(16),
   };
 
   Object.entries(iconMap).forEach(([cls, iconFn]) => {
@@ -39,7 +42,11 @@ async function boot() {
   injectStaticIcons();
 
   mountToolbar();
+  mountMobileSortButton();
+  mountTabletSidebarToggle();
   mountSidebar();
+  mountMobileFilterStrip();
+  mountMobileFilterActions();
   mountContextMenu();
   mountInspector();
   mountModals();
@@ -48,6 +55,8 @@ async function boot() {
 
   const viewport = document.getElementById('list-viewport');
   mountList(viewport);
+  mountTouchContextMenu();
+  mountMobileTapInspector();
 
   document.addEventListener('keydown', (e) => {
     const tag = document.activeElement?.tagName;

@@ -2,8 +2,30 @@
 function showToast(message, type) {
   if (type === undefined) type = 'info';
   const container = document.getElementById('toast-container');
+
+  // Deduplicate: if an identical message+type toast already exists, reset its
+  // timer instead of adding a new one
+  const existing = [...container.querySelectorAll('.toast')].find(t =>
+    t.dataset.message === message && t.dataset.type === type
+  );
+  if (existing) {
+    // Reset the fade-out by restoring opacity and restarting the timer
+    existing.style.transition = '';
+    existing.style.opacity = '1';
+    clearTimeout(Number(existing.dataset.timer));
+    const timer = setTimeout(() => {
+      existing.style.transition = 'opacity 220ms';
+      existing.style.opacity = '0';
+      setTimeout(() => existing.remove(), 220);
+    }, 4000);
+    existing.dataset.timer = String(timer);
+    return;
+  }
+
   const toast = document.createElement('div');
   toast.className = `toast toast--${type}`;
+  toast.dataset.message = message;
+  toast.dataset.type = type;
 
   const iconMap = {
     success: iconCheck(16),
@@ -17,11 +39,12 @@ function showToast(message, type) {
 
   container.appendChild(toast);
 
-  setTimeout(() => {
+  const timer = setTimeout(() => {
     toast.style.transition = 'opacity 220ms';
     toast.style.opacity = '0';
     setTimeout(() => toast.remove(), 220);
   }, 4000);
+  toast.dataset.timer = String(timer);
 }
 
 let selectedFile = null;
@@ -50,6 +73,101 @@ function resetAddModal() {
 }
 
 function openAddModal() {
+  // ── Mobile: use option sheet ────────────────────────────────
+  if (window.innerWidth < 640) {
+    openOptionSheet({
+      title: 'Add Torrent',
+      buildContent: (body) => {
+        body.innerHTML = `
+          <div style="display:flex;flex-direction:column;height:100%;min-height:0;">
+            <div style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-4);">
+              <div class="field-group">
+                <label class="field-label">Torrent file</label>
+                <div style="display:flex;align-items:center;gap:var(--space-3);">
+                  <button class="btn-secondary btn--md" id="btn-pick-file-mobile"
+                          type="button" style="flex-shrink:0;">
+                    Choose File
+                  </button>
+                  <span id="mobile-file-name"
+                        style="font-size:var(--type-body-sm);color:var(--color-text-secondary);
+                               overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                               flex:1;min-width:0;">
+                    No file chosen
+                  </span>
+                </div>
+                <input type="file" id="torrent-file-input-mobile" accept=".torrent" class="sr-only">
+              </div>
+              <div class="add-panel__divider"><span class="add-panel__divider-label">or</span></div>
+              <div class="field-group">
+                <label class="field-label" for="magnet-input-mobile">Magnet link or URL</label>
+                <textarea id="magnet-input-mobile" class="input textarea"
+                          placeholder="magnet:?xt=urn:btih:…" rows="3" spellcheck="false"
+                          style="font-size:16px;"></textarea>
+              </div>
+              <div class="field-group">
+                <label class="field-label" for="add-download-dir-mobile">Download to</label>
+                <input type="text" id="add-download-dir-mobile" class="input" spellcheck="false"
+                       style="font-size:16px;" value="${esc(state.prefs?.save_path || '')}">
+              </div>
+            </div>
+            <div style="padding:var(--space-3) var(--space-4);border-top:1px solid var(--color-border);display:flex;gap:var(--space-2);justify-content:flex-end;flex-shrink:0;">
+              <button class="btn-secondary btn--md" id="btn-add-cancel-mobile">Cancel</button>
+              <button class="btn-primary btn--md" id="btn-add-confirm-mobile" disabled>Add</button>
+            </div>
+          </div>`;
+
+        let mobileSelectedFile = null;
+        let mobileSelectedFileBase64 = null;
+
+        const updateMobileAddBtn = () => {
+          const btn = body.querySelector('#btn-add-confirm-mobile');
+          const hasMagnet = body.querySelector('#magnet-input-mobile')?.value.trim().length > 0;
+          if (btn) btn.disabled = !mobileSelectedFile && !hasMagnet;
+        };
+
+        body.querySelector('#magnet-input-mobile')?.addEventListener('input', updateMobileAddBtn);
+
+        const fileBtn   = body.querySelector('#btn-pick-file-mobile');
+        const fileInput = body.querySelector('#torrent-file-input-mobile');
+        const fileName  = body.querySelector('#mobile-file-name');
+
+        fileBtn?.addEventListener('click', () => fileInput?.click());
+        fileInput?.addEventListener('change', () => {
+          const file = fileInput.files[0];
+          if (!file) return;
+          mobileSelectedFile = file;
+          if (fileName) fileName.textContent = file.name;
+          updateMobileAddBtn();
+        });
+
+        body.querySelector('#btn-add-cancel-mobile')?.addEventListener('click', closeOptionSheet);
+
+        body.querySelector('#btn-add-confirm-mobile')?.addEventListener('click', async () => {
+          const dir = body.querySelector('#add-download-dir-mobile')?.value.trim() || '';
+          const btn = body.querySelector('#btn-add-confirm-mobile');
+          if (btn) { btn.disabled = true; btn.innerHTML = iconLoader(16, 'icon--spinning') + ' Adding…'; }
+          try {
+            if (mobileSelectedFile) {
+              await torrentAdd({ savepath: dir, torrentFile: mobileSelectedFile });
+            } else {
+              const magnet = body.querySelector('#magnet-input-mobile')?.value.trim() || '';
+              if (!magnet) { if (btn) { btn.disabled = false; btn.textContent = 'Add'; } return; }
+              await torrentAdd({ savepath: dir, urls: magnet });
+            }
+            closeOptionSheet();
+            forceRefresh();
+            showToast('Torrent added', 'success');
+          } catch (err) {
+            if (btn) { btn.disabled = false; btn.textContent = 'Add'; }
+            showToast('Failed to add torrent: ' + err.message, 'error');
+          }
+        });
+      },
+    });
+    return; // ← skip desktop path
+  }
+  // ── Desktop path continues below unchanged ──────────────────
+
   const rightPanel      = document.getElementById('right-panel');
   const addContent      = document.getElementById('add-content');
   const inspContent     = document.getElementById('inspector-content');

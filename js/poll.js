@@ -49,9 +49,25 @@ async function pollCycle() {
 
     if (data.server_state) {
       setServerState(data.server_state);
-    } else {
-      // server_state absent from delta means nothing changed — re-emit with
-      // existing state so toolbar and other listeners stay current
+    }
+
+    // Always recompute speed totals from the torrent map.
+    // server_state speeds (dl_info_speed / up_info_speed) are sampled on
+    // qBittorrent's internal clock and can arrive as zero even when torrents
+    // are actively transferring. The torrent map is updated every poll cycle
+    // and measures the same payload-only rate — use it unconditionally.
+    {
+      let dlTotal = 0;
+      let ulTotal = 0;
+      for (const t of state.torrents.values()) {
+        dlTotal += t.dlspeed ?? 0;
+        ulTotal += t.upspeed ?? 0;
+      }
+      state.serverState = {
+        ...state.serverState,
+        dl_info_speed: dlTotal,
+        up_info_speed: ulTotal,
+      };
       emit('serverstate:changed', state.serverState);
     }
 
