@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__visualize__read_me",
+      "WebSearch",
+      "WebFetch(domain:www.createwithswift.com)",
+      "WebFetch(domain:glassui.dev)",
+      "WebFetch(domain:letsdev.de)",
+      "WebFetch(domain:www.conor.fyi)"
+    ]
+  }
+}

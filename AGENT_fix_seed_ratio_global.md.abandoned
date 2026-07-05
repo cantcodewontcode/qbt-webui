@@ -1,0 +1,145 @@
+# AGENT TASK: Fix "Use Global Ratio" setting seed limit to "never stop"
+
+## Context
+
+Project: qbt-webui — a custom vanilla-JS web UI for qBittorrent.
+
+Source files live at `/var/www/qbittorrent/`. You may read any file there
+freely. **You must not directly edit any source file.** All changes must go
+through the shell commands below (sed / patch / etc.) which you will run on the
+server. After applying each change, write your completion notes to
+`/var/www/qbittorrent/NOTES_fix_seed_ratio_global.md`.
+
+---
+
+## Bug description
+
+When a user opens the "Set Seed Ratio" modal and chooses **"Use global
+setting"** from the *Ratio limit* dropdown, clicking Confirm actually sets the
+torrent to **seed forever (no limit)** instead of deferring to the global
+ratio. Setting a specific ratio (e.g. 2.00) works correctly.
+
+---
+
+## Root cause
+
+In `/var/www/qbittorrent/js/modals.js`, the qBittorrent API values for
+`ratioLimit` are swapped in two places:
+
+The **real** qBittorrent `setShareLimits` API semantics are:
+- `-2` → use the global ratio limit
+- `-1` → no limit (seed forever)
+- `>= 0` → specific ratio
+
+The file currently has them backwards:
+
+### 1. `ratioModeOf()` helper (reading back torrent state into the dropdown)
+
+```js
+// CURRENT (wrong):
+function ratioModeOf(t) {
+  const rl = t.ratio_limit ?? -1;
+  if (rl === -2) return 'forever';   // ← -2 is actually "use global"
+  if (rl >= 0)  return 'specific';
+  return 'global';                   // ← -1 is actually "no limit"
+}
+
+// CORRECT:
+function ratioModeOf(t) {
+  const rl = t.ratio_limit ?? -2;   // default to -2 (use global) when absent
+  if (rl === -1) return 'forever';  // -1 = no limit = seed forever
+  if (rl >= 0)  return 'specific';
+  return 'global';                  // -2 = use global
+}
+```
+
+### 2. The confirm-click handler (translating dropdown value → API value)
+
+```js
+// CURRENT (wrong):
+} else if (mode === 'global') {
+  ratioLimit = -1;   // ← sends "no limit" instead of "use global"
+} else if (mode === 'forever') {
+  ratioLimit = -2;   // ← sends "use global" instead of "no limit"
+}
+
+// CORRECT:
+} else if (mode === 'global') {
+  ratioLimit = -2;   // use global
+} else if (mode === 'forever') {
+  ratioLimit = -1;   // no limit / seed forever
+}
+```
+
+---
+
+## Steps to apply
+
+Read the full file first to locate exact line context before editing:
+
+```bash
+cat /var/www/qbittorrent/js/modals.js
+```
+
+Then apply **two** targeted sed replacements. Use the exact surrounding context
+shown below to avoid hitting any other line.
+
+### Fix 1 — `ratioModeOf` function
+
+Find the block:
+```
+  function ratioModeOf(t) {
+      const rl = t.ratio_limit ?? -1;
+      if (rl === -2) return 'forever';
+```
+
+Replace it with:
+```
+  function ratioModeOf(t) {
+      const rl = t.ratio_limit ?? -2;
+      if (rl === -1) return 'forever';
+```
+
+The line `if (rl >= 0)  return 'specific';` and `return 'global';` do **not**
+change.
+
+### Fix 2 — confirm handler ratio value mapping
+
+Find the block (inside the `seed-ratio-confirm` click handler):
+```
+    } else if (mode === 'global') {
+      ratioLimit = -1;
+    } else if (mode === 'forever') {
+      ratioLimit = -2;
+```
+
+Replace it with:
+```
+    } else if (mode === 'global') {
+      ratioLimit = -2;
+    } else if (mode === 'forever') {
+      ratioLimit = -1;
+```
+
+---
+
+## Verification
+
+After editing, confirm the changes with:
+```bash
+grep -n "ratioLimit\|ratio_limit\|ratioModeOf\|forever\|global" \
+  /var/www/qbittorrent/js/modals.js | head -30
+```
+
+Expect to see:
+- `ratioModeOf`: `?? -2` and `rl === -1) return 'forever'`
+- confirm handler: `'global'` → `-2` and `'forever'` → `-1`
+
+---
+
+## Completion notes
+
+Write `/var/www/qbittorrent/NOTES_fix_seed_ratio_global.md` containing:
+- Which lines were changed (before/after with line numbers)
+- The exact sed commands you ran
+- Confirmation output from the verification grep

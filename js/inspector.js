@@ -139,26 +139,24 @@ function renderGeneral(t, container) {
       ? `${connected} connected of ${swarmTotal} (${t.num_seeds ?? 0}↑ / ${t.num_leechs ?? 0}↓ connected, ${swarmSeeds} seeds in swarm)`
       : `${connected} connected (${t.num_seeds ?? 0} seeds, ${t.num_leechs ?? 0} leeches)`;
 
-  const piecesText = props.pieces_have != null
-    ? `${props.pieces_have} / ${props.pieces_num} (${formatSize(props.piece_size ?? 0)} each)`
-    : '—';
-
   const connectionsText = props.nb_connections != null
     ? `${props.nb_connections} (max: ${props.nb_connections_limit})`
     : '—';
+
+  const isDone = (t.progress ?? 0) >= 1;
 
   const rows = [
     ['Name',           t.name || '—'],
     ['State',          renderStateBadge(t)],
     ['Size',           formatSize(t.total_size ?? t.size ?? 0)],
     ['Progress',       formatPercent(t.progress ?? 0)],
-    ['Remaining',      (t.amount_left != null && t.amount_left > 0) ? formatSize(t.amount_left) : '—'],
-    ['Downloaded',     formatSize(props.total_downloaded ?? t.downloaded ?? 0)],
+    !isDone && ['Remaining',      (t.amount_left != null && t.amount_left > 0) ? formatSize(t.amount_left) : '—'],
+    !isDone && ['Downloaded',     formatSize(props.total_downloaded ?? t.downloaded ?? 0)],
     ['Uploaded',       formatSize(props.total_uploaded ?? t.uploaded ?? 0)],
     ['Ratio',          formatRatio(t.ratio ?? 0)],
-    ['Download speed', formatSpeed(t.dlspeed ?? 0)],
+    !isDone && ['Download speed', formatSpeed(t.dlspeed ?? 0)],
     ['Upload speed',   formatSpeed(t.upspeed ?? 0)],
-    ['ETA',            (() => {
+    !isDone && ['ETA',            (() => {
       const sc = torrentStateClass(t);
       if (sc === 'state-finished') return '—';
       if (sc === 'state-seeding') {
@@ -181,20 +179,15 @@ function renderGeneral(t, container) {
     ['Location',       `<span class="info-value--mono">${esc((() => { if (!t.content_path) return t.save_path || '—'; const i = t.content_path.lastIndexOf('/' + (t.name || '')); return i > 0 ? t.content_path.substring(0, i) : t.save_path || t.content_path; })())}</span>`],
     ['Added',          (t.added_on && t.added_on > 946684800) ? formatDate(t.added_on) : '—'],
     ['Completed',      (t.completion_on && t.completion_on > 946684800) ? formatDate(t.completion_on) : '—'],
-    ['Hash',           `<span class="info-value--mono">${esc(t.hash || '—')}</span>`],
-    ['Availability',   (t.availability != null && t.availability >= 0)
+    !isDone && ['Availability',   (t.availability != null && t.availability >= 0)
       ? formatPercent(t.availability)
       : (t.availability === -1 ? '100%' : '—')],
-    ['Pieces',         piecesText],
-    ['Wasted',         props.total_wasted != null ? formatSize(props.total_wasted) : '—'],
-    ['Active time',    t.time_active != null ? formatDuration(t.time_active) : (props.time_elapsed != null ? formatDuration(props.time_elapsed) : '—')],
     ['Last active',    (t.last_activity && t.last_activity > 946684800) ? formatDate(t.last_activity) : '—'],
-    ['Seeding time',   (props.seeding_time ?? t.seeding_time) != null ? formatDuration(props.seeding_time ?? t.seeding_time) : '—'],
     ['Connections',    connectionsText],
     ['Peers',          peersText],
     ['Tracker',        esc(t.tracker || '—')],
     ['Trackers',       t.trackers_count != null ? String(t.trackers_count) : '—'],
-  ];
+  ].filter(Boolean);
 
   let html = rows.map(([label, value]) =>
     `<div class="info-row">
@@ -523,7 +516,9 @@ async function _refreshActiveTab(hash, tab, container) {
       if (peersData.full_update) {
         inspectorPeers = peersData.peers ?? {};
       } else {
-        Object.assign(inspectorPeers, peersData.peers ?? {});
+        for (const [key, fields] of Object.entries(peersData.peers ?? {})) {
+          inspectorPeers[key] = { ...(inspectorPeers[key] || {}), ...fields };
+        }
         for (const key of (peersData.peers_removed ?? [])) delete inspectorPeers[key];
       }
     } else if (tab === 'files') {

@@ -348,18 +348,7 @@ function mountSetLocationModal() {
   const modal  = document.getElementById('modal-set-location');
   const pathEl = document.getElementById('set-location-path');
 
-  document.addEventListener('modal:set-location', e => {
-    const { ids, torrent } = e.detail;
-    pathEl.value = torrent?.save_path ?? '';
-    modal._pendingIds = ids;
-    modal.showModal();
-  });
-
-  document.getElementById('set-location-cancel').addEventListener('click', () => {
-    modal.close();
-  });
-
-  document.getElementById('set-location-confirm').addEventListener('click', async () => {
+  async function confirmSetLocation() {
     const path = pathEl.value.trim();
     if (!path) return;
     const hashes = modal._pendingIds;
@@ -370,7 +359,26 @@ function mountSetLocationModal() {
     } catch (err) {
       showToast('Failed to set location: ' + err.message, 'error');
     }
+  }
+
+  document.addEventListener('modal:set-location', e => {
+    const { ids, torrent } = e.detail;
+    pathEl.value = torrent?.save_path ?? '';
+    modal._pendingIds = ids;
+    modal.showModal();
+    pathEl.focus();
+    pathEl.setSelectionRange(pathEl.value.length, pathEl.value.length);
   });
+
+  pathEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmSetLocation(); }
+  });
+
+  document.getElementById('set-location-cancel').addEventListener('click', () => {
+    modal.close();
+  });
+
+  document.getElementById('set-location-confirm').addEventListener('click', confirmSetLocation);
 }
 
 function mountRenameModal() {
@@ -386,247 +394,216 @@ function mountRenameModal() {
     inputEl.select();
   });
 
-  document.getElementById('rename-cancel').addEventListener('click', () => {
-    modal.close();
-  });
-
-  document.getElementById('rename-confirm').addEventListener('click', async () => {
+  async function confirmRename() {
     const newName = inputEl.value.trim();
     if (!newName) return;
     const hash = modal._pendingId;
     modal.close();
     try {
-      {
-        await torrentRename(hash, newName);
-      }
+      await torrentRename(hash, newName);
       await forceRefresh();
     } catch (err) {
       showToast('Failed to rename: ' + err.message, 'error');
     }
+  }
+
+  inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); confirmRename(); }
   });
+
+  document.getElementById('rename-cancel').addEventListener('click', () => {
+    modal.close();
+  });
+
+  document.getElementById('rename-confirm').addEventListener('click', confirmRename);
 }
 
 function mountSeedRatioModal() {
-  const modal    = document.getElementById('modal-seed-ratio');
-  const modeEl   = document.getElementById('seed-ratio-mode');
-  const inputEl  = document.getElementById('seed-ratio-input');
-  function updateLimitRowVisibility() {
-    if (inputEl) inputEl.style.display = modeEl.value === 'specific' ? 'block' : 'none';
-  }
+  const modal       = document.getElementById('modal-seed-ratio');
+  const modeEl      = document.getElementById('share-limit-mode');
+  const customRows  = document.getElementById('share-limit-custom-rows');
+  const globalHint  = document.getElementById('share-limit-global-hint');
+  const confirmBtn  = document.getElementById('share-limit-confirm');
 
-  function updateSeedRatioHints() {
-    const ratioHint = document.getElementById('seed-ratio-global-hint');
-    const timeHint  = document.getElementById('seed-time-global-hint');
-    const ratioMode = document.getElementById('seed-ratio-mode')?.value;
-    const timeMode  = document.getElementById('seed-time-mode')?.value;
+  const ratioChk    = document.getElementById('share-limit-ratio-enabled');
+  const ratioVal    = document.getElementById('share-limit-ratio-value');
+  const timeChk     = document.getElementById('share-limit-time-enabled');
+  const timeVal     = document.getElementById('share-limit-time-value');
+  const inactiveChk = document.getElementById('share-limit-inactive-enabled');
+  const inactiveVal = document.getElementById('share-limit-inactive-value');
 
-    if (ratioHint) {
-      if (ratioMode === 'global') {
-        const globalRatio   = state.prefs?.max_ratio ?? null;
-        const globalEnabled = state.prefs?.max_ratio_enabled ?? false;
-        if (!globalEnabled || globalRatio === null) {
-          ratioHint.textContent = '(global: no limit)';
-        } else {
-          ratioHint.textContent = `(global: ${Number(globalRatio).toFixed(2)})`;
-        }
-      } else {
-        ratioHint.textContent = '';
+  function syncUI() {
+    const mode = modeEl.value;
+    customRows.style.display = mode === 'custom' ? '' : 'none';
+
+    if (mode === 'global') {
+      const globalRatio   = state.prefs?.max_ratio ?? null;
+      const ratioEnabled  = state.prefs?.max_ratio_enabled ?? false;
+      const globalMins    = state.prefs?.max_seeding_time ?? null;
+      const timeEnabled   = state.prefs?.max_seeding_time_enabled ?? false;
+      const parts = [];
+      if (ratioEnabled && globalRatio !== null && globalRatio >= 0) {
+        parts.push(`ratio ${Number(globalRatio).toFixed(2)}`);
       }
+      if (timeEnabled && globalMins !== null && globalMins >= 0) {
+        const h = Math.floor(globalMins / 60);
+        const m = globalMins % 60;
+        parts.push(`time ${h > 0 ? h + 'h ' : ''}${m}m`);
+      }
+      globalHint.textContent = parts.length
+        ? `Global: ${parts.join(', ')}`
+        : 'Global: no limit set';
+      globalHint.style.display = '';
+    } else {
+      globalHint.style.display = 'none';
     }
 
-    if (timeHint) {
-      if (timeMode === '-1') {
-        const globalMins    = state.prefs?.max_seeding_time ?? null;
-        const globalEnabled = state.prefs?.max_seeding_time_enabled ?? false;
-        if (!globalEnabled || globalMins === null || globalMins < 0) {
-          timeHint.textContent = '(global: no limit)';
-        } else {
-          const h = Math.floor(globalMins / 60);
-          const m = globalMins % 60;
-          const label = h > 0 ? `${h}h ${m}m` : `${m}m`;
-          timeHint.textContent = `(global: ${label})`;
-        }
-      } else {
-        timeHint.textContent = '';
-      }
+    // Enable/disable Apply
+    if (mode === 'custom') {
+      const anyChecked = ratioChk.checked || timeChk.checked || inactiveChk.checked;
+      confirmBtn.disabled = !anyChecked;
+    } else {
+      confirmBtn.disabled = false;
     }
   }
 
+  function syncCheckbox(chk, input) {
+    input.disabled = !chk.checked;
+    if (chk.checked) input.focus();
+    syncUI();
+  }
+
+  modeEl.addEventListener('change', syncUI);
+  ratioChk.addEventListener('change',    () => syncCheckbox(ratioChk,    ratioVal));
+  timeChk.addEventListener('change',     () => syncCheckbox(timeChk,     timeVal));
+  inactiveChk.addEventListener('change', () => syncCheckbox(inactiveChk, inactiveVal));
+
+  // ── Open ──────────────────────────────────────────────────────────────────
   document.addEventListener('modal:seed-ratio', e => {
-    const { ids, torrent } = e.detail;
-
-    function setMixedOption(selEl, useMixed) {
-      let opt = selEl.querySelector('option[value="mixed"]');
-      if (useMixed) {
-        if (!opt) {
-          opt = document.createElement('option');
-          opt.value = 'mixed';
-          opt.textContent = 'Mixed';
-          opt.hidden = true;
-          opt.disabled = true;
-          selEl.insertBefore(opt, selEl.firstChild);
-        }
-        selEl.value = 'mixed';
-        selEl.classList.add('is-mixed');
-      } else {
-        if (opt) opt.remove();
-        selEl.classList.remove('is-mixed');
-      }
-    }
+    const { ids } = e.detail;
+    modal._pendingIds = ids;
 
     const torrents = ids.map(h => state.torrents.get(h)).filter(Boolean);
+    const ref = torrents[0];
+    const mixed = torrents.length > 1;
 
-    function ratioModeOf(t) {
-      const rl = t.ratio_limit ?? -1;
-      if (rl === -2) return 'forever';
-      if (rl >= 0)  return 'specific';
-      return 'global';
+    // Determine mode from first torrent (or mixed default)
+    let mode = 'global';
+    if (!mixed && ref) {
+      const rl = ref.ratio_limit   ?? -2;
+      const tl = ref.seeding_time_limit ?? -2;
+      if (rl >= 0 || tl >= 0 || (ref.inactive_seeding_time_limit ?? -2) >= 0) {
+        mode = 'custom';
+      } else if (rl === -1 && tl === -1) {
+        mode = 'none';
+      } else {
+        mode = 'global';
+      }
     }
-    function timeModeOf(t) {
-      const tl = t.seeding_time_limit ?? -1;
-      if (tl === -2) return '-2';
-      if (tl >= 0)  return 'custom';
-      return '-1';
-    }
 
-    const ratioModes = [...new Set(torrents.map(ratioModeOf))];
-    const timeModes  = [...new Set(torrents.map(timeModeOf))];
-    const ratioMixed = ratioModes.length > 1;
-    const timeMixed  = timeModes.length > 1;
-
-    const timeModeElNow  = document.getElementById('seed-time-mode');
-    const timeInputElNow = document.getElementById('seed-time-input');
-
-    setMixedOption(modeEl, ratioMixed);
-    if (!ratioMixed) {
-      const mode = ratioModes[0] || 'global';
+    // Remove any stale mixed option
+    modeEl.querySelector('option[value="mixed"]')?.remove();
+    if (mixed) {
+      const opt = document.createElement('option');
+      opt.value = 'mixed-default';
+      opt.textContent = 'Use global share limit (mixed)';
+      opt.hidden = true;
+      modeEl.insertBefore(opt, modeEl.firstChild);
+      modeEl.value = 'mixed-default';
+      // Treat as global for the actual send
+    } else {
       modeEl.value = mode;
-      const refTorrent = torrent || torrents[0];
-      const rl = refTorrent?.ratio_limit ?? -1;
-      if (inputEl) inputEl.value = rl >= 0 ? rl.toFixed(2) : '2.00';
-    }
-    updateLimitRowVisibility();
-
-    if (timeModeElNow) {
-      setMixedOption(timeModeElNow, timeMixed);
-      if (!timeMixed) {
-        const tm = timeModes[0] || '-1';
-        timeModeElNow.value = tm;
-        if (tm === 'custom') {
-          const refTorrent = torrent || torrents[0];
-          const tl = refTorrent?.seeding_time_limit ?? 0;
-          if (timeInputElNow) timeInputElNow.value = tl >= 0 ? tl : 0;
-        }
-      }
-      if (timeInputElNow) {
-        timeInputElNow.style.display = timeModeElNow.value === 'custom' ? 'block' : 'none';
-      }
     }
 
-    modal._pendingIds    = ids;
-    modal._ratioWasMixed = ratioMixed;
-    modal._timeWasMixed  = timeMixed;
+    // Populate custom fields
+    const rl  = ref?.ratio_limit ?? -1;
+    const tl  = ref?.seeding_time_limit ?? -1;
+    const il  = ref?.inactive_seeding_time_limit ?? -1;
+
+    ratioChk.checked    = rl >= 0;
+    ratioVal.value      = rl >= 0 ? Number(rl).toFixed(2) : '';
+    ratioVal.disabled   = rl < 0;
+
+    timeChk.checked     = tl >= 0;
+    timeVal.value       = tl >= 0 ? String(tl) : '';
+    timeVal.disabled    = tl < 0;
+
+    inactiveChk.checked  = il >= 0;
+    inactiveVal.value    = il >= 0 ? String(il) : '';
+    inactiveVal.disabled = il < 0;
+
     modal.showModal();
-    updateSeedRatioHints();
-    if (!ratioMixed && modeEl.value === 'specific') {
-      setTimeout(() => { inputEl?.select(); }, 50);
+    syncUI();
+
+    if (mode === 'custom' && rl >= 0) {
+      setTimeout(() => ratioVal.select(), 50);
     }
   });
 
-  modeEl?.addEventListener('change', () => {
-    if (modeEl.value !== 'mixed') modeEl.classList.remove('is-mixed');
-    updateLimitRowVisibility();
-    updateSeedRatioHints();
-  });
-
-  document.getElementById('seed-ratio-cancel')?.addEventListener('click', () => {
+  // ── Cancel ────────────────────────────────────────────────────────────────
+  document.getElementById('share-limit-cancel')?.addEventListener('click', () => {
     modal.close();
   });
 
-  const timeInputEl  = document.getElementById('seed-time-input');
-  const timeModeEl   = document.getElementById('seed-time-mode');
-  function updateTimeLimitRowVisibility() {
-    if (timeInputEl) timeInputEl.style.display = timeModeEl?.value === 'custom' ? 'block' : 'none';
-  }
-  timeModeEl?.addEventListener('change', () => {
-    if (timeModeEl.value !== 'mixed') timeModeEl.classList.remove('is-mixed');
-    updateTimeLimitRowVisibility();
-    updateSeedRatioHints();
-  });
-
-  document.getElementById('seed-ratio-confirm')?.addEventListener('click', async () => {
-    const mode   = modeEl.value;
+  // ── Confirm ───────────────────────────────────────────────────────────────
+  confirmBtn?.addEventListener('click', async () => {
     const hashes = modal._pendingIds.slice();
+    const mode = modeEl.value;
     modal.close();
 
-    const ratioStillMixed = (mode === 'mixed');
-    const timeStillMixed  = (timeModeEl?.value === 'mixed');
+    let ratioLimit, seedingTimeLimit, inactiveSeedingTimeLimit;
 
-    if (ratioStillMixed && timeStillMixed) {
-      showToast('No changes to apply', 'info');
-      return;
-    }
-
-    let ratioLimit;
-    if (ratioStillMixed) {
-      ratioLimit = null;
-    } else if (mode === 'global') {
-      ratioLimit = -1;
-    } else if (mode === 'forever') {
-      ratioLimit = -2;
+    if (mode === 'global' || mode === 'mixed-default') {
+      ratioLimit = seedingTimeLimit = inactiveSeedingTimeLimit = -2;
+    } else if (mode === 'none') {
+      ratioLimit = seedingTimeLimit = inactiveSeedingTimeLimit = -1;
     } else {
-      const val   = inputEl.value.trim();
-      const ratio = parseFloat(val);
-      if (isNaN(ratio) || ratio < 0) {
-        showToast('Invalid ratio value', 'error');
-        return;
+      // custom
+      if (ratioChk.checked) {
+        const v = parseFloat(ratioVal.value);
+        if (isNaN(v) || v < 0) { showToast('Invalid ratio value', 'error'); return; }
+        ratioLimit = v;
+      } else {
+        ratioLimit = -1;
       }
-      ratioLimit = ratio;
-    }
 
-    let seedingTimeLimit;
-    const timeMode = timeModeEl?.value ?? '-1';
-    if (timeStillMixed) {
-      seedingTimeLimit = null;
-    } else if (timeMode === '-2') {
-      seedingTimeLimit = -2;
-    } else if (timeMode === 'custom') {
-      const mins = parseInt(timeInputEl?.value ?? '', 10);
-      seedingTimeLimit = (!isNaN(mins) && mins >= 0) ? mins : -1;
-    } else {
-      seedingTimeLimit = -1;
+      if (timeChk.checked) {
+        const v = parseInt(timeVal.value, 10);
+        if (isNaN(v) || v < 0) { showToast('Invalid time value', 'error'); return; }
+        seedingTimeLimit = v;
+      } else {
+        seedingTimeLimit = -1;
+      }
+
+      if (inactiveChk.checked) {
+        const v = parseInt(inactiveVal.value, 10);
+        if (isNaN(v) || v < 0) { showToast('Invalid inactive time value', 'error'); return; }
+        inactiveSeedingTimeLimit = v;
+      } else {
+        inactiveSeedingTimeLimit = -1;
+      }
     }
 
     try {
-      if (ratioLimit === null || seedingTimeLimit === null) {
-        await Promise.all(hashes.map(hash => {
-          const t  = state.torrents.get(hash);
-          const rl = ratioLimit       !== null ? ratioLimit       : (t?.ratio_limit ?? -1);
-          const tl = seedingTimeLimit !== null ? seedingTimeLimit : (t?.seeding_time_limit ?? -1);
-          return torrentSetShareLimits([hash], rl, tl);
-        }));
-      } else {
-        await torrentSetShareLimits(hashes, ratioLimit, seedingTimeLimit);
-      }
+      await torrentSetShareLimits(hashes, ratioLimit, seedingTimeLimit, inactiveSeedingTimeLimit);
       await forceRefresh();
       const count = hashes.length;
       showToast(
-        count === 1 ? 'Seed limits updated' : `Seed limits updated for ${count} torrents`,
+        count === 1 ? 'Share limit updated' : `Share limit updated for ${count} torrents`,
         'success'
       );
     } catch (err) {
-      showToast('Failed to set limits: ' + err.message, 'error');
+      showToast('Failed to set share limit: ' + err.message, 'error');
     }
   });
 
-  inputEl?.addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      document.getElementById('seed-ratio-confirm')?.click();
-    }
+  // Enter key in any input triggers confirm
+  [ratioVal, timeVal, inactiveVal].forEach(input => {
+    input?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); confirmBtn?.click(); }
+    });
   });
 }
-
 function mountModals() {
   mountAddModal();
   mountRemoveModal();

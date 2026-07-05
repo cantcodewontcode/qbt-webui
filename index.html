@@ -386,46 +386,70 @@
 <!-- ── Set Seed Ratio modal ───────────────────────────────────────── -->
 <dialog id="modal-seed-ratio" aria-labelledby="modal-seed-ratio-title">
   <div class="modal-header">
-    <h2 class="modal-title" id="modal-seed-ratio-title">Set Seed Ratio</h2>
+    <h2 class="modal-title" id="modal-seed-ratio-title">Share Limit</h2>
   </div>
   <div class="modal-body">
 
-    <!-- Ratio limit row -->
+    <!-- Top-level mode -->
     <div class="form-row">
-      <label class="form-label" for="seed-ratio-mode">Ratio limit</label>
+      <label class="form-label" for="share-limit-mode">Mode</label>
       <div class="form-select-wrap">
-        <select class="form-select" id="seed-ratio-mode">
-          <option value="global">Use global setting</option>
-          <option value="specific">Stop seeding at ratio</option>
-          <option value="forever">Seed forever</option>
+        <select class="form-select" id="share-limit-mode">
+          <option value="global">Use global share limit</option>
+          <option value="none">Set no share limit</option>
+          <option value="custom">Set share limit…</option>
         </select>
-        <input type="text" inputmode="decimal" class="form-input" id="seed-ratio-input"
-               placeholder="e.g. 2.0" autocomplete="off"
-               style="width:72px; display:none;">
-        <span class="form-select-hint" id="seed-ratio-global-hint"></span>
       </div>
     </div>
 
-    <!-- Seeding time row -->
-    <div class="form-row">
-      <label class="form-label" for="seed-time-mode">Seeding time</label>
-      <div class="form-select-wrap">
-        <select class="form-select" id="seed-time-mode">
-          <option value="-1">Use global setting</option>
-          <option value="-2">No limit</option>
-          <option value="custom">Stop after…</option>
-        </select>
-        <input type="text" inputmode="numeric" class="form-input" id="seed-time-input"
-               placeholder="minutes" autocomplete="off"
-               style="width:72px; display:none;">
-        <span class="form-select-hint" id="seed-time-global-hint"></span>
+    <!-- Custom sub-rows (shown only when mode === "custom") -->
+    <div id="share-limit-custom-rows" style="display:none;">
+
+      <!-- Ratio -->
+      <div class="form-row form-row--indent">
+        <label class="form-label form-label--checkbox">
+          <input type="checkbox" id="share-limit-ratio-enabled" class="form-checkbox">
+          Ratio
+        </label>
+        <input type="text" inputmode="decimal" class="form-input" id="share-limit-ratio-value"
+               placeholder="e.g. 2.0" autocomplete="off" style="width:80px;" disabled>
       </div>
-    </div>
+
+      <!-- Total seeding time -->
+      <div class="form-row form-row--indent">
+        <label class="form-label form-label--checkbox">
+          <input type="checkbox" id="share-limit-time-enabled" class="form-checkbox">
+          Total time
+        </label>
+        <div style="display:flex;align-items:center;gap:var(--space-2);">
+          <input type="text" inputmode="numeric" class="form-input" id="share-limit-time-value"
+                 placeholder="minutes" autocomplete="off" style="width:80px;" disabled>
+          <span class="form-select-hint">min</span>
+        </div>
+      </div>
+
+      <!-- Inactive seeding time -->
+      <div class="form-row form-row--indent">
+        <label class="form-label form-label--checkbox">
+          <input type="checkbox" id="share-limit-inactive-enabled" class="form-checkbox">
+          Inactive time
+        </label>
+        <div style="display:flex;align-items:center;gap:var(--space-2);">
+          <input type="text" inputmode="numeric" class="form-input" id="share-limit-inactive-value"
+                 placeholder="minutes" autocomplete="off" style="width:80px;" disabled>
+          <span class="form-select-hint">min</span>
+        </div>
+      </div>
+
+    </div><!-- /share-limit-custom-rows -->
+
+    <!-- Global hint line (shown when mode === "global") -->
+    <p class="form-hint" id="share-limit-global-hint" style="display:none;"></p>
 
   </div>
   <div class="modal-footer">
-    <button class="btn-secondary btn--md" id="seed-ratio-cancel">Cancel</button>
-    <button class="btn-primary btn--md" id="seed-ratio-confirm">Apply</button>
+    <button class="btn-secondary btn--md" id="share-limit-cancel">Cancel</button>
+    <button class="btn-primary btn--md" id="share-limit-confirm">Apply</button>
   </div>
 </dialog>
 

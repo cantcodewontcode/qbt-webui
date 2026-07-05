@@ -216,7 +216,7 @@ function buildMenuHTML(isMulti, torrent) {
 }
 
 function wireMenuEvents(menu, id, selectedIds, torrent, isMulti) {
-  menu.addEventListener('click', (e) => {
+  menu.onclick = (e) => {
     const itemEl = e.target.closest('.context-menu__item');
     if (!itemEl) return;
     if (itemEl.classList.contains('context-menu__item--disabled')) return;
@@ -227,12 +227,12 @@ function wireMenuEvents(menu, id, selectedIds, torrent, isMulti) {
       return;
     }
     handleAction(action, itemEl, id, selectedIds, torrent, isMulti);
-  });
+  };
 
   const qpItem = menu.querySelector('[data-action="queue-priority"]');
   if (qpItem) {
-    qpItem.addEventListener('mouseenter', () => openSubmenu(qpItem, selectedIds));
-    qpItem.addEventListener('mouseleave', (e) => scheduleSubmenuClose(e.relatedTarget));
+    qpItem.onmouseenter = () => openSubmenu(qpItem, selectedIds);
+    qpItem.onmouseleave = (e) => scheduleSubmenuClose(e.relatedTarget);
   }
 }
 
