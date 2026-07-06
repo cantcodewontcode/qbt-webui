@@ -122,6 +122,7 @@ function mountLog() {
       rightPanel.setAttribute('aria-hidden', 'false');
 
       await loadLog();
+      repositionLogChipIndicator();
     } else {
       if (logContent) logContent.hidden = true;
       const anyVisible = [inspContent, settingsContent, addContent]
@@ -146,6 +147,11 @@ function mountLog() {
   });
 
   // ── Severity filter chips ─────────────────────────────────────────
+  const logChipsContainer = document.querySelector('.log-filter-chips');
+  const logChipIndicator = document.getElementById('log-chip-indicator');
+  const repositionLogChipIndicator = () =>
+    positionNavIndicator(logChipsContainer, '.log-chip--active', logChipIndicator, true);
+
   document.getElementById('log-content')?.querySelectorAll('.log-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       document.querySelectorAll('.log-chip').forEach(c => {
@@ -156,8 +162,11 @@ function mountLog() {
       chip.setAttribute('aria-pressed', 'true');
       _logSeverity = chip.dataset.severity;
       applyLogFilters();
+      repositionLogChipIndicator();
     });
   });
+
+  repositionLogChipIndicator();
 
   // ── Log search ────────────────────────────────────────────────────
   const logSearchInput = document.getElementById('log-search-input');

@@ -3,6 +3,11 @@ function mountMobileFilterStrip() {
   const strip = document.getElementById('mobile-filter-strip');
   if (!strip) return;
 
+  const chipsContainer = document.getElementById('mobile-filter-chips');
+  const indicator = document.getElementById('mobile-chip-indicator');
+  const repositionChipIndicator = () =>
+    positionNavIndicator(chipsContainer, '.mobile-chip--active', indicator, true);
+
   // Wire chip clicks to setFilter()
   strip.querySelectorAll('.mobile-chip').forEach(chip => {
     chip.addEventListener('click', () => {
@@ -17,6 +22,7 @@ function mountMobileFilterStrip() {
       chip.classList.toggle('mobile-chip--active', active);
       chip.setAttribute('aria-pressed', String(active));
     });
+    repositionChipIndicator();
   });
 
   // Keep mobile chip counts in sync — hide zero-count chips, reset filter if active chip empties
@@ -49,7 +55,11 @@ function mountMobileFilterStrip() {
     setCount('checking',    FILTER_MAP.checking);
     setCount('moving',      FILTER_MAP.moving);
     setCount('fetching',    FILTER_MAP.fetching);
+
+    repositionChipIndicator();
   });
+
+  repositionChipIndicator();
 }
 
 function mountTouchContextMenu() {

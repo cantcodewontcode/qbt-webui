@@ -18,8 +18,11 @@ function openSortSheet() {
     buildContent: (body) => {
       const wrapper = document.createElement('div');
       wrapper.style.padding = 'var(--space-2) 0';
-      wrapper.innerHTML = _buildSortHTML();
+      wrapper.style.position = 'relative';
+      wrapper.innerHTML = `<div class="nav-indicator" id="sort-option-indicator" aria-hidden="true"></div>` + _buildSortHTML();
       body.appendChild(wrapper);
+
+      positionNavIndicator(wrapper, '.sort-option--active', wrapper.querySelector('#sort-option-indicator'));
 
       wrapper.querySelectorAll('.sort-option').forEach(opt => {
         opt.addEventListener('click', () => {

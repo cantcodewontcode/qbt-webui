@@ -6,7 +6,12 @@
       "WebFetch(domain:www.createwithswift.com)",
       "WebFetch(domain:glassui.dev)",
       "WebFetch(domain:letsdev.de)",
-      "WebFetch(domain:www.conor.fyi)"
+      "WebFetch(domain:www.conor.fyi)",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s https://transmission.spryfamily.com/app.css -o /tmp/live_check2.css)",
+      "Read(//tmp/**)",
+      "Bash(curl -s \"https://transmission.spryfamily.com/index.html?t=$\\(date +%s\\)\" -o /tmp/check_index.html)",
+      "Bash(curl -s \"https://transmission.spryfamily.com/app.css?t=$\\(date +%s\\)\" -o /tmp/check_app.css)"
     ]
   }
 }

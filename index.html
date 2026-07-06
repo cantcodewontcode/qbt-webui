@@ -10,80 +10,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
 
-  <link rel="stylesheet" href="app.css?v=2">
+  <link rel="stylesheet" href="app.css?v=3">
 </head>
 <body>
 
 <div id="app">
-
-  <!-- ── Toolbar ──────────────────────────────────────────────────── -->
-  <header id="toolbar" role="banner">
-    <div class="toolbar__left">
-      <button class="btn-ghost icon-btn tablet-sidebar-toggle" id="btn-tablet-sidebar"
-              aria-label="Toggle sidebar" aria-expanded="false">
-        <span class="icon icon--menu" aria-hidden="true"></span>
-      </button>
-      <span class="app-name">qBittorrent</span>
-      <div id="conn-status" class="conn-status conn-status--connected"
-           title="Connected" aria-label="Connection status"></div>
-    </div>
-    <div class="toolbar__center">
-      <div class="search-wrap">
-        <span class="icon icon--search" aria-hidden="true"></span>
-        <input type="text" id="search-input" class="search-input"
-               placeholder="Filter torrents…" autocomplete="off" spellcheck="false"
-               aria-label="Filter torrents by name">
-        <button class="search-clear" id="search-clear"
-                aria-label="Clear search" hidden>
-          <span class="icon--x"></span>
-        </button>
-      </div>
-      <div id="mobile-filter-actions">
-        <button class="btn-ghost icon-btn" id="btn-sort-filter" aria-label="Sort torrents">
-          <span class="icon icon--sort" aria-hidden="true"></span>
-        </button>
-        <button class="btn-ghost icon-btn" id="btn-settings-filter" aria-label="Settings">
-          <span class="icon icon--settings" aria-hidden="true"></span>
-        </button>
-        <button class="btn-ghost icon-btn" id="btn-add-filter" aria-label="Add torrent">
-          <span class="icon icon--plus" aria-hidden="true"></span>
-        </button>
-      </div>
-    </div>
-    <div class="toolbar__right">
-      <button class="alt-speed-btn" id="btn-alt-speed-indicator"
-              aria-label="Alt speed active — click to disable"
-              hidden>
-        <span class="icon icon--moon" aria-hidden="true"></span>
-      </button>
-      <button class="speed-readout speed-readout--down" id="speed-down"
-              aria-label="Download speed — click to configure limit">
-        <span class="icon icon--arrow-down" aria-hidden="true"></span>
-        <span class="speed-readout__value" id="speed-down-value">—</span>
-      </button>
-      <button class="speed-readout speed-readout--up" id="speed-up"
-              aria-label="Upload speed — click to configure limit">
-        <span class="icon icon--arrow-up" aria-hidden="true"></span>
-        <span class="speed-readout__value" id="speed-up-value">—</span>
-      </button>
-      <button class="btn-ghost icon-btn mobile-sort-btn" id="btn-mobile-sort"
-              aria-label="Sort torrents" title="Sort">
-        <span class="icon icon--sort" aria-hidden="true"></span>
-      </button>
-      <div class="toolbar__divider" aria-hidden="true"></div>
-
-      <button class="btn-ghost icon-btn" id="btn-log" aria-label="Application log">
-        <span class="icon icon--log" aria-hidden="true"></span>
-      </button>
-      <button class="btn-ghost icon-btn" id="btn-settings" aria-label="Settings">
-        <span class="icon icon--settings" aria-hidden="true"></span>
-      </button>
-      <button class="btn-primary btn--sm" id="btn-add-torrent">
-        <span class="icon icon--plus" aria-hidden="true"></span>
-        <span class="btn-label">Add Torrent</span>
-      </button>
-    </div>
-  </header>
 
   <!-- ── Error banner ────────────────────────────────────────────── -->
 
@@ -93,6 +24,7 @@
     <!-- ── Mobile filter strip (hidden on desktop via CSS) ─────────── -->
     <div id="mobile-filter-strip" aria-label="Filter torrents" role="navigation">
       <div id="mobile-filter-chips">
+        <div class="nav-indicator nav-indicator--h" id="mobile-chip-indicator" aria-hidden="true"></div>
         <button class="mobile-chip mobile-chip--active" data-filter="all" aria-pressed="true">
           All <span class="mobile-chip__count" id="mcount-all">—</span>
         </button>
@@ -128,69 +60,142 @@
 
     <!-- Sidebar -->
     <aside id="sidebar" aria-label="Filter torrents">
-      <nav class="filter-nav">
-        <button class="filter-tab filter-tab--active" data-filter="all" aria-pressed="true">
-          All
-          <span class="filter-count" id="count-all">—</span>
+      <div class="sidebar-header">
+        <button class="btn-ghost icon-btn tablet-sidebar-toggle" id="btn-tablet-sidebar"
+                aria-label="Toggle sidebar" aria-expanded="false">
+          <span class="icon icon--menu" aria-hidden="true"></span>
         </button>
-        <button class="filter-tab" data-filter="downloading" aria-pressed="false" hidden>
-          Downloading
-          <span class="filter-count" id="count-downloading">—</span>
+        <span class="app-name">qBittorrent</span>
+        <div id="conn-status" class="conn-status conn-status--connected"
+             title="Connected" aria-label="Connection status"></div>
+      </div>
+      <div class="sidebar-scroll">
+        <nav class="filter-nav">
+          <div class="nav-indicator" id="filter-nav-indicator" aria-hidden="true"></div>
+          <button class="filter-tab filter-tab--active" data-filter="all" aria-pressed="true">
+            All
+            <span class="filter-count" id="count-all">—</span>
+          </button>
+          <button class="filter-tab" data-filter="downloading" aria-pressed="false" hidden>
+            Downloading
+            <span class="filter-count" id="count-downloading">—</span>
+          </button>
+          <button class="filter-tab" data-filter="seeding" aria-pressed="false" hidden>
+            Seeding
+            <span class="filter-count" id="count-seeding">—</span>
+          </button>
+          <button class="filter-tab" data-filter="paused" aria-pressed="false" hidden>
+            Paused
+            <span class="filter-count" id="count-paused">—</span>
+          </button>
+          <button class="filter-tab" data-filter="fetching" aria-pressed="false" hidden>
+            Fetching
+            <span class="filter-count" id="count-fetching">—</span>
+          </button>
+          <button class="filter-tab" data-filter="finished" aria-pressed="false" hidden>
+            Finished
+            <span class="filter-count" id="count-finished">—</span>
+          </button>
+          <button class="filter-tab" data-filter="errors" aria-pressed="false" hidden>
+            Errors
+            <span class="filter-count" id="count-errors">—</span>
+          </button>
+          <button class="filter-tab" data-filter="checking" aria-pressed="false" hidden>
+            Checking
+            <span class="filter-count" id="count-checking">—</span>
+          </button>
+          <button class="filter-tab" data-filter="moving" aria-pressed="false" hidden>
+            Moving
+            <span class="filter-count" id="count-moving">—</span>
+          </button>
+          <button class="filter-tab" data-filter="stalled" aria-pressed="false" hidden>
+            Stalled
+            <span class="filter-count" id="count-stalled">—</span>
+          </button>
+        </nav>
+        <div id="category-nav"></div>
+      </div>
+      <div class="sidebar-footer">
+        <button class="alt-speed-btn" id="btn-alt-speed-indicator"
+                aria-label="Alt speed active — click to disable"
+                hidden>
+          <span class="icon icon--moon" aria-hidden="true"></span>
         </button>
-        <button class="filter-tab" data-filter="seeding" aria-pressed="false" hidden>
-          Seeding
-          <span class="filter-count" id="count-seeding">—</span>
+        <button class="speed-readout speed-readout--down" id="speed-down"
+                aria-label="Download speed — click to configure limit">
+          <span class="icon icon--arrow-down" aria-hidden="true"></span>
+          <span class="speed-readout__value" id="speed-down-value">—</span>
         </button>
-        <button class="filter-tab" data-filter="paused" aria-pressed="false" hidden>
-          Paused
-          <span class="filter-count" id="count-paused">—</span>
+        <button class="speed-readout speed-readout--up" id="speed-up"
+                aria-label="Upload speed — click to configure limit">
+          <span class="icon icon--arrow-up" aria-hidden="true"></span>
+          <span class="speed-readout__value" id="speed-up-value">—</span>
         </button>
-        <button class="filter-tab" data-filter="fetching" aria-pressed="false" hidden>
-          Fetching
-          <span class="filter-count" id="count-fetching">—</span>
-        </button>
-        <button class="filter-tab" data-filter="finished" aria-pressed="false" hidden>
-          Finished
-          <span class="filter-count" id="count-finished">—</span>
-        </button>
-        <button class="filter-tab" data-filter="errors" aria-pressed="false" hidden>
-          Errors
-          <span class="filter-count" id="count-errors">—</span>
-        </button>
-        <button class="filter-tab" data-filter="checking" aria-pressed="false" hidden>
-          Checking
-          <span class="filter-count" id="count-checking">—</span>
-        </button>
-        <button class="filter-tab" data-filter="moving" aria-pressed="false" hidden>
-          Moving
-          <span class="filter-count" id="count-moving">—</span>
-        </button>
-        <button class="filter-tab" data-filter="stalled" aria-pressed="false" hidden>
-          Stalled
-          <span class="filter-count" id="count-stalled">—</span>
-        </button>
-      </nav>
-      <div id="category-nav"></div>
+      </div>
     </aside>
 
-    <!-- List area -->
-    <div id="list-area">
-      <div id="col-headers" role="row">
-        <button class="col col-name col-header" data-sort="name" aria-sort="none">Name</button>
-        <button class="col col-size col-header" data-sort="size" aria-sort="none">Size</button>
-        <button class="col col-dl col-header" data-sort="dlspeed" aria-sort="none"
-                aria-label="Download speed">↓</button>
-        <button class="col col-ul col-header" data-sort="upspeed" aria-sort="none"
-                aria-label="Upload speed">↑</button>
-        <button class="col col-peers col-header" data-sort="num_connected" aria-sort="none"
-                aria-label="Peers connected">Peers</button>
-        <button class="col col-ratio col-header" data-sort="ratio" aria-sort="none">Ratio</button>
-        <button class="col col-eta col-header" data-sort="eta" aria-sort="none">ETA</button>
-        <button class="col col-pct col-header" data-sort="progress"
-                aria-sort="none" aria-label="Percent done">Done</button>
+    <!-- Content pane: header floats free, table is its own card below it -->
+    <div class="content-pane">
+      <div class="list-area-header">
+        <div id="mobile-filter-actions">
+          <button class="btn-ghost icon-btn" id="btn-sort-filter" aria-label="Sort torrents">
+            <span class="icon icon--sort" aria-hidden="true"></span>
+          </button>
+          <button class="btn-ghost icon-btn" id="btn-settings-filter" aria-label="Settings">
+            <span class="icon icon--settings" aria-hidden="true"></span>
+          </button>
+          <button class="btn-ghost icon-btn" id="btn-add-filter" aria-label="Add torrent">
+            <span class="icon icon--plus" aria-hidden="true"></span>
+          </button>
+        </div>
+        <div class="toolbar__right">
+          <button class="btn-ghost icon-btn icon-btn--glass" id="btn-add-torrent" aria-label="Add torrent" data-tooltip="Add torrent">
+            <span class="icon icon--plus" aria-hidden="true"></span>
+          </button>
+          <div class="toolbar-group">
+            <button class="btn-ghost icon-btn mobile-sort-btn" id="btn-mobile-sort"
+                    aria-label="Sort torrents" title="Sort">
+              <span class="icon icon--sort" aria-hidden="true"></span>
+            </button>
+            <button class="btn-ghost icon-btn" id="btn-log" aria-label="Application log" data-tooltip="Log">
+              <span class="icon icon--log" aria-hidden="true"></span>
+            </button>
+            <button class="btn-ghost icon-btn" id="btn-settings" aria-label="Settings" data-tooltip="Settings">
+              <span class="icon icon--settings" aria-hidden="true"></span>
+            </button>
+          </div>
+          <div class="search-wrap">
+            <span class="icon icon--search" aria-hidden="true"></span>
+            <input type="text" id="search-input" class="search-input"
+                   placeholder="Filter torrents…" autocomplete="off" spellcheck="false"
+                   aria-label="Filter torrents by name">
+            <button class="search-clear" id="search-clear"
+                    aria-label="Clear search" hidden>
+              <span class="icon--x"></span>
+            </button>
+          </div>
+        </div>
       </div>
-      <div id="list-viewport" role="list" aria-label="Torrents" tabindex="0">
-        <!-- Virtualiser renders rows here at runtime -->
+
+      <!-- List area -->
+      <div id="list-area">
+        <div id="col-headers" role="row">
+          <button class="col col-name col-header" data-sort="name" aria-sort="none">Name</button>
+          <button class="col col-size col-header" data-sort="size" aria-sort="none">Size</button>
+          <button class="col col-dl col-header" data-sort="dlspeed" aria-sort="none"
+                  aria-label="Download speed">↓</button>
+          <button class="col col-ul col-header" data-sort="upspeed" aria-sort="none"
+                  aria-label="Upload speed">↑</button>
+          <button class="col col-peers col-header" data-sort="num_connected" aria-sort="none"
+                  aria-label="Peers connected">Peers</button>
+          <button class="col col-ratio col-header" data-sort="ratio" aria-sort="none">Ratio</button>
+          <button class="col col-eta col-header" data-sort="eta" aria-sort="none">ETA</button>
+          <button class="col col-pct col-header" data-sort="progress"
+                  aria-sort="none" aria-label="Percent done">Done</button>
+        </div>
+        <div id="list-viewport" role="list" aria-label="Torrents" tabindex="0">
+          <!-- Virtualiser renders rows here at runtime -->
+        </div>
       </div>
     </div>
 
@@ -297,6 +302,7 @@
         </div>
         <div class="log-toolbar">
           <div class="log-filter-chips" role="group" aria-label="Filter by severity">
+            <div class="nav-indicator nav-indicator--h" id="log-chip-indicator" aria-hidden="true"></div>
             <button class="log-chip log-chip--active" data-severity="all" aria-pressed="true">All</button>
             <button class="log-chip" data-severity="info" aria-pressed="false">Info</button>
             <button class="log-chip" data-severity="warning" aria-pressed="false">Warning</button>

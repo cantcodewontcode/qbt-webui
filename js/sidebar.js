@@ -5,7 +5,37 @@ function mountSidebar() {
   mountColHeaders();
 }
 
+/**
+ * Positions a shared sliding indicator behind whichever item in `container`
+ * matches `activeSelector`, animating via CSS transition rather than each
+ * item toggling its own background. The closest web analog to SwiftUI's
+ * glassEffectID shared-identity morph between states.
+ * `horizontal: true` slides along the x-axis (for the mobile chip strip)
+ * instead of the y-axis (for vertical sidebar lists).
+ */
+function positionNavIndicator(container, activeSelector, indicatorEl, horizontal) {
+  if (!container || !indicatorEl) return;
+  const activeEl = container.querySelector(activeSelector);
+  if (!activeEl || activeEl.hidden) {
+    indicatorEl.classList.remove('nav-indicator--visible');
+    return;
+  }
+  if (horizontal) {
+    indicatorEl.style.transform = `translate(${activeEl.offsetLeft}px, -50%)`;
+    indicatorEl.style.width = `${activeEl.offsetWidth}px`;
+  } else {
+    indicatorEl.style.transform = `translateY(${activeEl.offsetTop}px)`;
+    indicatorEl.style.height = `${activeEl.offsetHeight}px`;
+  }
+  indicatorEl.classList.add('nav-indicator--visible');
+}
+
 function mountFilterTabs() {
+  const nav = document.querySelector('.filter-nav');
+  const indicator = document.getElementById('filter-nav-indicator');
+
+  const reposition = () => positionNavIndicator(nav, '.filter-tab--active', indicator);
+
   document.querySelectorAll('.filter-tab').forEach(btn => {
     btn.addEventListener('click', () => setFilter(btn.dataset.filter));
   });
@@ -16,6 +46,7 @@ function mountFilterTabs() {
       btn.classList.toggle('filter-tab--active', active);
       btn.setAttribute('aria-pressed', String(active));
     });
+    reposition();
   });
 
   on('torrents:changed', () => {
@@ -50,7 +81,11 @@ function mountFilterTabs() {
     setCount('count-checking',    FILTER_MAP.checking);
     setCount('count-moving',      FILTER_MAP.moving);
     setCount('count-stalled',     FILTER_MAP.stalled);
+
+    reposition();
   });
+
+  reposition();
 }
 
 function mountCategoryNav() {
@@ -63,7 +98,8 @@ function mountCategoryNav() {
       nav.innerHTML = '';
       return;
     }
-    let html = '<span class="category-nav-label">Categories</span>';
+    let html = '<div class="nav-indicator" id="category-nav-indicator" aria-hidden="true"></div>';
+    html += '<span class="category-nav-label">Categories</span>';
     html += cats.map(name => {
       const active = state.activeCategory === name ? ' category-tab--active' : '';
       return `<button class="category-tab${active}" data-category="${esc(name)}">${esc(name)}</button>`;
@@ -77,6 +113,7 @@ function mountCategoryNav() {
         emit('ui:filter', state.filter);
       });
     });
+    positionNavIndicator(nav, '.category-tab--active', document.getElementById('category-nav-indicator'));
   }
 
   on('categories:changed', renderCategories);

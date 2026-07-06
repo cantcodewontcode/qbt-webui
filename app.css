@@ -33,10 +33,10 @@
   --raw-warm-700: #3D3730;
   --raw-warm-800: #1E1A15;
 
-  --raw-copper-050: #F7EAD8;
-  --raw-copper-300: #E08B3A;
-  --raw-copper-400: #C06B1C;
-  --raw-copper-500: #954F0F;
+  --raw-blue-050: #E9F0FC;
+  --raw-blue-300: #6398EA;
+  --raw-blue-400: #3D7CE0;
+  --raw-blue-500: #2C5FB8;
 
   --raw-pine-050:   #E0F2EB;
   --raw-pine-400:   #2A7A56;
@@ -64,11 +64,30 @@
   --color-border-strong: #A49A8E;
   --color-border-subtle: #D9D2C8;
 
-  /* ── Accent (copper-amber) ──────────────────────────────────── */
-  --color-accent:         #C06B1C;
-  --color-accent-hover:   #E08B3A;
-  --color-accent-pressed: #954F0F;
-  --color-accent-subtle:  #F7EAD8;
+  /* ── Accent (system blue) — reserved for primary actions, links,
+     and focus only. Selection/navigation state uses --glass-* below. */
+  --color-accent:         #3D7CE0;
+  --color-accent-hover:   #6398EA;
+  --color-accent-pressed: #2C5FB8;
+  --color-accent-subtle:  #E9F0FC;
+
+  /* ── Glass (Liquid Glass chrome material) ─────────────────────
+     Reserved for the navigation layer (toolbar, sidebar, menus,
+     sheets) — never applied to content (rows, forms, modals). */
+  --glass-bg:            rgba(255, 255, 255, 0.38);
+  --glass-bg-strong:     rgba(255, 255, 255, 0.55);
+  --glass-bg-selected:   rgba(255, 255, 255, 0.48);
+  --glass-bg-hover:      rgba(255, 255, 255, 0.75);
+  --glass-border:        rgba(255, 255, 255, 0.6);
+  --glass-blur:          20px;
+  --glass-blur-sm:       8px;
+  --glass-saturate:      180%;
+  --glass-highlight:     inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  --glass-shadow:        0 8px 20px rgba(30, 26, 21, 0.12);
+  --glass-shadow-sm:     0 2px 8px rgba(30, 26, 21, 0.08);
+
+  --radius-glass-sm: 10px;
+  --radius-glass-md: 14px;
 
   /* ── State: Success (seeding) ───────────────────────────────── */
   --color-success:        #2A7A56;
@@ -195,11 +214,34 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Ambient layer — gives the glass chrome something to bend. Deliberately
+   vivid and saturated (per user preference — this is a tool used in
+   short bursts, not stared at for hours, so a bold color wash is fine). */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 15% 20%, #3B6FE0 0%, transparent 40%),
+    radial-gradient(circle at 80% 15%, #E0A23B 0%, transparent 35%),
+    radial-gradient(circle at 60% 80%, #4FBE8B 0%, transparent 45%),
+    radial-gradient(circle at 20% 85%, #C0563B 0%, transparent 40%);
+  filter: blur(70px) saturate(1.3);
+}
+
 button {
   cursor: pointer;
   border: none;
   background: none;
   font: inherit;
+  /* Safari applies native control chrome (a blue hover/focus glow) to
+     plain <button> elements unless appearance is reset — this is almost
+     certainly the source of stray blue, not any of our own CSS. */
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 input, textarea, select {
@@ -227,12 +269,6 @@ a:hover {
   overflow: hidden;
 }
 
-#toolbar {
-  height: var(--height-toolbar);
-  flex-shrink: 0;
-  z-index: var(--z-sticky);
-}
-
 #main-area {
   display: flex;
   flex: 1;
@@ -242,6 +278,21 @@ a:hover {
 #sidebar {
   width: var(--width-sidebar);
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Wraps the header and the table so the header can float free on the raw
+   background while the table gets its own separate card below it — see
+   DESIGN_SYSTEM.md §0/§4. */
+.content-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  gap: var(--space-3);
+  overflow: hidden;
 }
 
 #list-area {
@@ -269,37 +320,70 @@ a:hover {
   flex-shrink: 0;
 }
 
+/* ── §3b  Floating Glass Shell (desktop/tablet only) ──────────────
+   Below 640px the app keeps its original edge-to-edge mobile layout —
+   the floating/rounded treatment is a desktop-window idiom and doesn't
+   suit a phone viewport. See DESIGN_SYSTEM.md §0/§5. */
+@media (min-width: 640px) {
+  #app {
+    position: relative;
+    z-index: 1;
+    padding: var(--space-3);
+    gap: var(--space-3);
+  }
 
-/* ── §4  Toolbar ─────────────────────────────────────────────────── */
+  #sidebar {
+    margin-right: var(--space-3);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-glass-md);
+  }
 
-#toolbar {
-  background: var(--color-bg-surface);
-  border-bottom: 1px solid var(--color-border);
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-4);
-  position: relative;
+  #list-area {
+    background: var(--color-bg-app);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-glass-md);
+  }
+
+  #right-panel {
+    margin-left: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-glass-md);
+    transition: width var(--duration-slow) var(--ease-enter),
+                margin-left var(--duration-slow) var(--ease-enter);
+  }
+
+  #right-panel.right-panel--open {
+    margin-left: var(--space-3);
+  }
 }
 
-.toolbar__left {
+
+/* ── §4  Embedded pane headers (replaces the old standalone toolbar) ──
+   Liquid Glass sidebars extend to the true top of the window — there is
+   no separate floating bar above them. Each pane owns its own header
+   instead: the sidebar's is app identity, the list pane's is search +
+   actions. See DESIGN_SYSTEM.md §0/§8. */
+
+.sidebar-header {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-shrink: 0;
-  position: absolute;
-  left: var(--space-4);
-  top: 50%;
-  transform: translateY(-50%);
+  height: var(--height-toolbar);
+  padding: 0 var(--space-4);
 }
 
-.toolbar__center {
-  flex-grow: 1;
+/* No shared background/border here on purpose — Liquid Glass toolbars
+   aren't a module. Individual controls float directly on the content
+   background; see DESIGN_SYSTEM.md §0/§4. */
+.list-area-header {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  max-width: 320px;
-  margin-left: calc(var(--width-sidebar) - var(--space-4) + 24px);
+  gap: var(--space-3);
+  flex-shrink: 0;
+  height: var(--height-toolbar);
+  padding: 0 var(--space-4);
 }
 
 .toolbar__right {
@@ -311,18 +395,10 @@ a:hover {
 }
 
 .app-name {
-  font-size: var(--type-heading-2);
+  font-size: var(--type-heading-1);
   font-weight: var(--weight-semibold);
   color: var(--color-text-primary);
   white-space: nowrap;
-}
-
-.toolbar__divider {
-  width: 1px;
-  height: 20px;
-  background: var(--color-border-subtle);
-  margin: 0 var(--space-2);
-  flex-shrink: 0;
 }
 
 
@@ -333,22 +409,30 @@ a:hover {
   display: flex;
   align-items: center;
   width: 100%;
+  max-width: 240px;
 }
 
 .search-input {
   width: 100%;
-  height: 30px;
-  border-radius: var(--radius-sm);
-  background: var(--color-bg-app);
-  border: 1px solid var(--color-border);
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight);
   font-size: var(--type-body);
   color: var(--color-text-primary);
-  padding: 0 var(--space-3) 0 28px;
+  padding: 0 var(--space-3) 0 32px;
   transition: border-color var(--duration-fast) var(--ease-default),
               box-shadow var(--duration-fast) var(--ease-default);
   /* Remove browser default search input styling */
   -webkit-appearance: none;
   appearance: none;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .search-input { background: var(--color-bg-app); }
 }
 
 .search-input::placeholder {
@@ -364,7 +448,7 @@ a:hover {
 .search-wrap > .icon:first-child,
 .search-wrap > span:first-child {
   position: absolute;
-  left: 8px;
+  left: 11px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-text-disabled);
@@ -408,8 +492,8 @@ a:hover {
   gap: var(--space-1);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
-  font-family: var(--font-data);
-  font-size: var(--type-data-lg);
+  font-family: var(--font-ui);
+  font-size: var(--type-body-sm);
   font-weight: var(--weight-medium);
   color: var(--color-text-secondary);
   transition: background var(--duration-fast) var(--ease-default);
@@ -454,52 +538,124 @@ a:hover {
 /* ── §7  Sidebar and Filter Tabs ─────────────────────────────────── */
 
 #sidebar {
-  background: var(--color-bg-surface);
-  border-right: 1px solid var(--color-border);
-  padding: var(--space-4) 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-right: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--glass-shadow-sm);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  #sidebar { background: var(--color-bg-surface); }
+}
+
+.sidebar-scroll {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+}
+
+/* Status readouts, not actions — kept out of the primary command surface
+   and given the small, glanceable treatment Apple's own bottom bars use
+   (see the Windows HIG "Avoid putting critical information... in a bottom
+   bar" guidance — this is intentionally non-critical, ambient info). */
+.sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-2);
+  border-top: 1px solid var(--glass-border);
+}
+
+.sidebar-footer .speed-readout {
+  font-size: var(--type-caption);
+  padding: var(--space-1);
 }
 
 .filter-nav {
   display: flex;
   flex-direction: column;
+  position: relative;
+  padding: var(--space-4) var(--space-2) var(--space-2);
+}
+
+/* Shared sliding indicator — one physical element that animates to the
+   active tab's position, instead of each tab toggling its own background.
+   Closest web analog to glassEffectID's shared-identity morph. */
+.nav-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 36px;
+  border-radius: var(--radius-glass-sm);
+  background: var(--glass-bg-selected);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  box-shadow: var(--glass-highlight);
+  transition: transform var(--duration-slow) var(--ease-enter),
+              height var(--duration-slow) var(--ease-enter),
+              opacity var(--duration-fast) var(--ease-default);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+}
+
+/* .filter-nav and #category-nav carry their own horizontal padding (see
+   §3 sidebar rules) — absolute left/right:0 ignores a container's padding
+   and overshoots past the tabs, which correctly inset via normal flow.
+   Match that inset here explicitly. */
+.filter-nav .nav-indicator,
+#category-nav .nav-indicator {
+  left: var(--space-2);
+  right: var(--space-2);
+}
+
+.nav-indicator--visible {
+  opacity: 1;
+}
+
+/* Horizontal variant — for horizontally-arranged chip/pill rows (mobile
+   filter strip, log severity chips) instead of vertical tab lists. */
+.nav-indicator--h {
+  top: 50%;
+  left: 0;
+  right: auto;
+  height: 26px;
+  transform: translate(0, -50%);
+  transition: transform var(--duration-slow) var(--ease-enter),
+              width var(--duration-slow) var(--ease-enter),
+              opacity var(--duration-fast) var(--ease-default);
 }
 
 .filter-tab {
   width: 100%;
   text-align: left;
   height: 36px;
-  padding: 0 var(--space-3) 0 9px;
+  padding: 0 var(--space-3);
   font-size: var(--type-body);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-left: 3px solid transparent;
-  transition: background var(--duration-fast) var(--ease-default),
-              color var(--duration-fast) var(--ease-default);
+  border-radius: var(--radius-glass-sm);
+  position: relative;
+  z-index: 1;
+  transition: color var(--duration-fast) var(--ease-default);
 }
 
 .filter-tab[hidden] { display: none; }
 
-.filter-tab:hover {
-  background: var(--color-bg-inset);
-  color: var(--color-text-primary);
-}
-
 .filter-tab--active {
-  color: var(--color-accent);
-  background: var(--color-accent-subtle);
-  border-left-color: var(--color-accent);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-medium);
 }
 
 .filter-count {
-  font-family: var(--font-data);
-  font-size: var(--type-data-sm);
+  font-family: var(--font-ui);
+  font-size: var(--type-body-sm);
   color: var(--color-text-secondary);
-  background: var(--color-bg-inset);
-  padding: 1px 6px;
-  border-radius: var(--radius-sm);
   flex-shrink: 0;
 }
 
@@ -509,9 +665,36 @@ a:hover {
 #col-headers {
   display: flex;
   align-items: center;
-  background: var(--color-bg-surface);
-  border-bottom: 1px solid var(--color-border);
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  border-bottom: 1px solid var(--glass-border);
   user-select: none;
+  position: relative;
+  z-index: var(--z-raised);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  #col-headers { background: var(--color-bg-surface); }
+}
+
+/* Scroll edge effect — rows fade into the header boundary as they scroll
+   past it, standing in for the true content-passes-beneath-chrome overlap
+   Apple's system scroll views provide automatically (see DESIGN_SYSTEM.md §0). */
+#list-viewport {
+  position: relative;
+}
+
+#list-viewport::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, var(--color-bg-app) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: var(--z-raised);
 }
 
 .col-header {
@@ -919,7 +1102,7 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
   font-size: var(--type-label);
   font-weight: var(--weight-medium);
   white-space: nowrap;
@@ -934,6 +1117,7 @@ a:hover {
 .btn-primary {
   background: var(--color-accent);
   color: var(--color-text-inverse);
+  box-shadow: var(--glass-highlight);
 }
 
 .btn-primary:hover   { background: var(--color-accent-hover); }
@@ -955,6 +1139,43 @@ a:hover {
 .btn-ghost:hover {
   background: var(--color-bg-inset);
   color: var(--color-text-primary);
+}
+
+/* Related header buttons share ONE glass container instead of each having
+   its own bubble/border — "borders aren't necessary because the section
+   provides a visible container" (Apple HIG, Toolbars). Individual buttons
+   inside stay borderless, distinguished only by hover state. */
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--glass-highlight);
+}
+
+.toolbar-group .btn-ghost {
+  color: var(--color-text-primary);
+}
+
+.toolbar-group .btn-ghost:hover {
+  /* Not --glass-bg-hover (0.75) — this button sits on top of
+     .toolbar-group's own 0.55-opacity fill, so that value would
+     compound with the parent's and read visibly more opaque than
+     Add Torrent's 0.75 against the raw background alone. This lower
+     value is chosen so the combined result matches Add Torrent's. */
+  background: rgba(255, 255, 255, 0.44);
+  backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .toolbar-group { background: var(--color-bg-surface); }
 }
 
 .btn-destructive {
@@ -981,11 +1202,43 @@ button:disabled,
 .icon-btn {
   width: 32px;
   height: 32px;
+  flex-shrink: 0;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-pill);
+}
+
+/* The browser's default focus ring is blue — override with a neutral
+   ring so these buttons stay monochromatic (no stray blue on click/tab). */
+.icon-btn:focus-visible,
+.toolbar-group .btn-ghost:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-border-strong);
+}
+
+/* A standalone button that needs its own glass bubble (not grouped into
+   a shared .toolbar-group container) — untinted, same material as the
+   grouped buttons, just its own separate circle. Sized to match the
+   .toolbar-group's own height (32px button + 2px padding each side). */
+.icon-btn--glass {
+  width: 36px;
+  height: 36px;
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight);
+  color: var(--color-text-primary);
+}
+
+.icon-btn--glass:hover {
+  background: var(--glass-bg-hover);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .icon-btn--glass { background: var(--color-bg-surface); }
 }
 
 
@@ -1257,14 +1510,20 @@ dialog[open] {
 .context-menu {
   position: fixed;
   z-index: var(--z-modal);
-  background: var(--color-bg-overlay);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-glass-md);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
   min-width: 200px;
   padding: var(--space-1) 0;
   /* overflow-y intentionally not set — controlled by positionMenu() */
   animation: dropdown-enter var(--duration-default) var(--ease-enter);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .context-menu { background: var(--color-bg-overlay); }
 }
 
 .context-menu--hidden {
@@ -1395,8 +1654,12 @@ dialog[open] {
 }
 
 .settings-nav__item--active {
-  color: var(--color-accent);
-  background: var(--color-accent-subtle);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-medium);
+  background: var(--glass-bg-selected);
+  backdrop-filter: blur(var(--glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm));
+  box-shadow: var(--glass-highlight), var(--glass-shadow-sm);
 }
 
 .settings-content {
@@ -1840,7 +2103,7 @@ dialog[open] {
     display: flex;
     flex-direction: column;
     position: fixed;
-    top: var(--height-toolbar);
+    top: 0;
     bottom: 0;
     left: 0;
     z-index: var(--z-sticky);
@@ -1868,7 +2131,7 @@ dialog[open] {
     flex-basis: 100%;
   }
 
-  #toolbar {
+  .list-area-header {
     flex-wrap: wrap;
     height: auto;
     min-height: var(--height-toolbar);
@@ -1946,14 +2209,20 @@ dialog[open] {
   position: fixed;  /* creates positioning context for caret */
   z-index: var(--z-modal);
   width: 260px;
-  background: var(--color-bg-overlay);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-glass-md);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .speed-popover { background: var(--color-bg-overlay); }
 }
 
 .speed-popover__title {
@@ -2613,9 +2882,9 @@ input[type="number"] {
 /* ── §34  Category Nav ──────────────────────────────────────────── */
 
 #category-nav {
-  padding: var(--space-2) 0;
-  border-top: 1px solid var(--color-border-subtle);
+  padding: var(--space-2) var(--space-2) var(--space-2);
   margin-top: var(--space-2);
+  position: relative;
 }
 
 .category-nav-label {
@@ -2631,29 +2900,24 @@ input[type="number"] {
   width: 100%;
   text-align: left;
   height: 32px;
-  padding: 0 var(--space-3) 0 var(--space-4);
+  padding: 0 var(--space-3);
   font-size: var(--type-body-sm);
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-left: 3px solid transparent;
-  transition: background var(--duration-fast) var(--ease-default),
-              color var(--duration-fast) var(--ease-default);
+  border-radius: var(--radius-glass-sm);
+  position: relative;
+  z-index: 1;
+  transition: color var(--duration-fast) var(--ease-default);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.category-tab:hover {
-  background: var(--color-bg-inset);
-  color: var(--color-text-primary);
-}
-
 .category-tab--active {
-  color: var(--color-accent);
-  background: var(--color-accent-subtle);
-  border-left-color: var(--color-accent);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-medium);
 }
 
 
@@ -2709,15 +2973,17 @@ input[type="number"] {
     overflow-x: hidden;
   }
 
-  /* ── Toolbar — two-row layout ─────────────────────────────────── */
+  /* ── List area header — two-row layout ────────────────────────── */
 
-  #toolbar {
+  .list-area-header {
     height: auto;
     flex-wrap: wrap;
     padding: 0 var(--space-3);
     row-gap: 0;
     align-items: stretch;
-    /* Two rows: [left + right controls] / [search] */
+    /* Two rows: [right controls] / [search] — app identity now lives in
+       .sidebar-header, which is hidden on mobile; a dedicated mobile pass
+       should decide where that content belongs on narrow viewports. */
   }
 
   .toolbar__left {
@@ -2802,12 +3068,19 @@ input[type="number"] {
     display: block;
     flex-shrink: 0;
     height: var(--height-filter-strip);
-    background: var(--color-bg-surface);
-    border-bottom: 1px solid var(--color-border);
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-bottom: 1px solid var(--glass-border);
+    box-shadow: var(--glass-highlight);
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+  }
+
+  @supports not (backdrop-filter: blur(1px)) {
+    #mobile-filter-strip { background: var(--color-bg-surface); }
   }
 
   #mobile-filter-strip::-webkit-scrollbar {
@@ -2821,6 +3094,7 @@ input[type="number"] {
     padding: 0 var(--space-3);
     height: 100%;
     white-space: nowrap;
+    position: relative;
   }
 
   #mobile-filter-chips::-webkit-scrollbar {
@@ -2860,6 +3134,8 @@ input[type="number"] {
     white-space: nowrap;
     flex-shrink: 0;
     cursor: pointer;
+    position: relative;
+    z-index: 1;
     transition:
       background var(--duration-fast) var(--ease-default),
       border-color var(--duration-fast) var(--ease-default),
@@ -2872,9 +3148,8 @@ input[type="number"] {
   }
 
   .mobile-chip--active {
-    background: var(--color-accent-subtle);
-    border-color: var(--color-accent);
-    color: var(--color-accent);
+    color: var(--color-text-primary);
+    font-weight: var(--weight-semibold);
   }
 
   .mobile-chip__count {
@@ -3085,19 +3360,20 @@ input[type="number"] {
 
 /* Sheet */
 .sort-sheet {
+  /* Inset on all sides — a real half-sheet floats above the display edge
+     rather than fusing to it, so content can peek through beneath it. */
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: var(--space-2);
   z-index: var(--z-modal);
-  background: var(--color-bg-overlay);
-  border-top-left-radius:  var(--radius-lg);
-  border-top-right-radius: var(--radius-lg);
-  border-top:   1px solid var(--color-border);
-  border-left:  1px solid var(--color-border);
-  border-right: 1px solid var(--color-border);
-  box-shadow: var(--shadow-lg);
-  transform: translateY(100%);
+  background: var(--glass-bg-strong);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border-radius: var(--radius-glass-md);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight), var(--shadow-lg);
+  transform: translateY(120%);
   transition:
     transform var(--duration-slow) var(--ease-exit),
     visibility 0ms var(--duration-slow);
@@ -3107,6 +3383,10 @@ input[type="number"] {
   flex-direction: column;
   overflow: hidden;
   overscroll-behavior: contain;
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .sort-sheet { background: var(--color-bg-overlay); }
 }
 
 .sort-sheet--visible {
@@ -3174,6 +3454,8 @@ input[type="number"] {
   font-weight: var(--weight-regular);
   color: var(--color-text-primary);
   cursor: pointer;
+  position: relative;
+  z-index: 1;
   transition: background var(--duration-fast) var(--ease-default);
   user-select: none;
   -webkit-user-select: none;
@@ -3186,11 +3468,12 @@ input[type="number"] {
 }
 
 .sort-option:active {
-  background: var(--color-accent-subtle);
+  background: var(--glass-bg-selected);
 }
 
 .sort-option--active {
-  color: var(--color-accent);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-medium);
 }
 
 .sort-option__dir {
@@ -3199,7 +3482,7 @@ input[type="number"] {
   gap: var(--space-1);
   font-family: var(--font-data);
   font-size: var(--type-data-sm);
-  color: var(--color-accent);
+  color: var(--color-text-secondary);
 }
 
 .sort-option__dir svg {
@@ -3284,6 +3567,7 @@ input[type="number"] {
   display: flex;
   gap: var(--space-1);
   flex-wrap: wrap;
+  position: relative;
 }
 
 .log-chip {
@@ -3298,6 +3582,8 @@ input[type="number"] {
   font-family: var(--font-ui);
   font-weight: 500;
   cursor: pointer;
+  position: relative;
+  z-index: 1;
   transition: background var(--duration-fast) var(--ease-default),
               color var(--duration-fast) var(--ease-default),
               border-color var(--duration-fast) var(--ease-default);
@@ -3312,13 +3598,12 @@ input[type="number"] {
 }
 
 .log-chip--active {
-  background: var(--color-accent);
-  color: var(--color-text-inverse);
-  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+  font-weight: var(--weight-semibold);
 }
 
 .log-chip--active:hover {
-  background: var(--color-accent-hover);
+  background: var(--glass-bg-selected);
 }
 
 .log-search-bar {
