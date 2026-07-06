@@ -18,8 +18,8 @@ function injectStaticIcons() {
   const iconMap = {
     'icon--search':       () => iconSearch(14),
     'icon--x':            () => iconX(16),
-    'icon--arrow-down':   () => iconArrowDown(14),
-    'icon--arrow-up':     () => iconArrowUp(14),
+    'icon--arrow-down':   () => iconArrowDownSF(14),
+    'icon--arrow-up':     () => iconArrowUpSF(14),
     'icon--settings':     () => iconSlidersHorizontal(16),
     'icon--plus':         () => iconPlusApp(16),
     'icon--file':         () => iconFile(16),

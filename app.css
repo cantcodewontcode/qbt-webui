@@ -23,46 +23,48 @@
 
   /* ── Raw Palette ─────────────────────────────────────────────
      Reference values only. Use semantic tokens in all components. */
-  --raw-warm-000: #F8F4EF;
-  --raw-warm-100: #F0EBE4;
-  --raw-warm-200: #E6E0D8;
-  --raw-warm-300: #D9D2C8;
-  --raw-warm-400: #C4BCB0;
-  --raw-warm-500: #A49A8E;
-  --raw-warm-600: #7A7168;
-  --raw-warm-700: #3D3730;
-  --raw-warm-800: #1E1A15;
+  --raw-neutral-000: #FFFFFF;
+  --raw-neutral-100: #F7F7F9;
+  --raw-neutral-200: #EEEEF1;
+  --raw-neutral-300: #E3E3E8;
+  --raw-neutral-400: #C9C9D1;
+  --raw-neutral-500: #AEAEB6;
+  --raw-neutral-600: #6E6E76;
+  --raw-neutral-700: #3A3A3F;
+  --raw-neutral-800: #1C1C1E;
 
   --raw-blue-050: #E9F0FC;
   --raw-blue-300: #6398EA;
   --raw-blue-400: #3D7CE0;
   --raw-blue-500: #2C5FB8;
 
-  --raw-pine-050:   #E0F2EB;
-  --raw-pine-400:   #2A7A56;
-  --raw-ember-050:  #F5EDD5;
-  --raw-ember-400:  #A86D0E;
-  --raw-fault-050:  #F5E0E0;
-  --raw-fault-400:  #A43030;
-  --raw-signal-050: #DFF0F5;
-  --raw-signal-400: #2A6080;
+  --raw-pine-050:   #E3F0E8;
+  --raw-pine-400:   #15803D;
+  --raw-ember-050:  #F6EBE0;
+  --raw-ember-400:  #B45A00;
+  --raw-fault-050:  #F8E6E7;
+  --raw-fault-400:  #C6303A;
+  --raw-signal-050: #E2EEF2;
+  --raw-signal-400: #0D6E96;
 
   /* ── Semantic: Surface ──────────────────────────────────────── */
-  --color-bg-app:     #E6E0D8;
-  --color-bg-surface: #F0EBE4;
-  --color-bg-overlay: #F8F4EF;
-  --color-bg-inset:   #D9D2C8;
+  --color-bg-app:     #EEEEF1;
+  --color-bg-surface: #F7F7F9;
+  --color-bg-overlay: #FFFFFF;
+  --color-bg-inset:   #E3E3E8;
+  --color-bg-row-alt: #F1F1F4;
 
   /* ── Semantic: Text ─────────────────────────────────────────── */
-  --color-text-primary:   #1E1A15;
-  --color-text-secondary: #7A7168;
-  --color-text-disabled:  #A49A8E;
-  --color-text-inverse:   #F8F4EF;
+  --color-text-primary:   #1C1C1E;
+  --color-text-secondary: #6E6E76;
+  --color-text-header:    #6E6E76;
+  --color-text-disabled:  #AEAEB6;
+  --color-text-inverse:   #FFFFFF;
 
   /* ── Semantic: Border ───────────────────────────────────────── */
-  --color-border:        #C4BCB0;
-  --color-border-strong: #A49A8E;
-  --color-border-subtle: #D9D2C8;
+  --color-border:        #C9C9D1;
+  --color-border-strong: #AEAEB6;
+  --color-border-subtle: #E3E3E8;
 
   /* ── Accent (system blue) — reserved for primary actions, links,
      and focus only. Selection/navigation state uses --glass-* below. */
@@ -83,31 +85,31 @@
   --glass-blur-sm:       8px;
   --glass-saturate:      180%;
   --glass-highlight:     inset 0 1px 0 rgba(255, 255, 255, 0.55);
-  --glass-shadow:        0 8px 20px rgba(30, 26, 21, 0.12);
-  --glass-shadow-sm:     0 2px 8px rgba(30, 26, 21, 0.08);
+  --glass-shadow:        0 8px 20px rgba(0, 0, 0, 0.12);
+  --glass-shadow-sm:     0 2px 8px rgba(0, 0, 0, 0.08);
 
   --radius-glass-sm: 10px;
   --radius-glass-md: 14px;
 
   /* ── State: Success (seeding) ───────────────────────────────── */
-  --color-success:        #2A7A56;
-  --color-success-subtle: #E0F2EB;
+  --color-success:        #15803D;
+  --color-success-subtle: #E3F0E8;
 
   /* ── State: Warning (stalled / queued) ─────────────────────── */
-  --color-warning:        #A86D0E;
-  --color-warning-subtle: #F5EDD5;
+  --color-warning:        #B45A00;
+  --color-warning-subtle: #F6EBE0;
 
   /* ── State: Critical (error) ────────────────────────────────── */
-  --color-critical:        #A43030;
-  --color-critical-subtle: #F5E0E0;
+  --color-critical:        #C6303A;
+  --color-critical-subtle: #F8E6E7;
 
   /* ── State: Info (verifying / metadata) ────────────────────── */
-  --color-info:        #2A6080;
-  --color-info-subtle: #DFF0F5;
+  --color-info:        #0D6E96;
+  --color-info-subtle: #E2EEF2;
 
   /* ── Typography ─────────────────────────────────────────────── */
   --font-ui:   'Instrument Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-data: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'SF Mono', monospace;
+  --font-data: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
 
   --weight-regular:  400;
   --weight-medium:   500;
@@ -150,9 +152,9 @@
 
   /* ── Shadows ─────────────────────────────────────────────────── */
   --shadow-none: none;
-  --shadow-sm:   0 1px 3px rgba(30,26,21,.10), 0 1px 1px rgba(30,26,21,.07);
-  --shadow-md:   0 4px 16px rgba(30,26,21,.14), 0 2px 4px rgba(30,26,21,.08);
-  --shadow-lg:   0 16px 48px rgba(30,26,21,.20), 0 4px 12px rgba(30,26,21,.10);
+  --shadow-sm:   0 1px 3px rgba(0,0,0,.10), 0 1px 1px rgba(0,0,0,.07);
+  --shadow-md:   0 4px 16px rgba(0,0,0,.14), 0 2px 4px rgba(0,0,0,.08);
+  --shadow-lg:   0 16px 48px rgba(0,0,0,.20), 0 4px 12px rgba(0,0,0,.10);
 
   /* ── Motion ──────────────────────────────────────────────────── */
   --duration-instant:    0ms;
@@ -346,7 +348,6 @@ a:hover {
 
   #right-panel {
     margin-left: 0;
-    border: 1px solid var(--color-border);
     border-radius: var(--radius-glass-md);
     transition: width var(--duration-slow) var(--ease-enter),
                 margin-left var(--duration-slow) var(--ease-enter);
@@ -354,6 +355,7 @@ a:hover {
 
   #right-panel.right-panel--open {
     margin-left: var(--space-3);
+    border: 1px solid var(--color-border);
   }
 }
 
@@ -460,18 +462,23 @@ a:hover {
 
 .search-clear {
   position: absolute;
-  right: 4px;
+  right: 10px;
   top: 50%;
   transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  color: var(--color-text-disabled);
-  transition: background var(--duration-fast) var(--ease-default),
-              color var(--duration-fast) var(--ease-default);
+  border-radius: 50%;
+  background: var(--color-text-disabled);
+  color: var(--color-text-inverse);
+  transition: background var(--duration-fast) var(--ease-default);
+}
+
+.search-clear svg {
+  width: 8px;
+  height: 8px;
 }
 
 .search-clear[hidden] {
@@ -479,8 +486,7 @@ a:hover {
 }
 
 .search-clear:hover {
-  background: var(--color-bg-inset);
-  color: var(--color-text-secondary);
+  background: var(--color-text-secondary);
 }
 
 
@@ -562,6 +568,7 @@ a:hover {
 .sidebar-footer {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
   flex-shrink: 0;
   padding: var(--space-2) var(--space-2);
@@ -569,8 +576,19 @@ a:hover {
 }
 
 .sidebar-footer .speed-readout {
-  font-size: var(--type-caption);
+  font-size: var(--type-body-sm);
   padding: var(--space-1);
+  /* Fixed width regardless of digit count — otherwise a longer number
+     on one side (e.g. upload) visually outweighs the other and the row
+     reads as off-center even though the container itself is centered. */
+  width: 76px;
+  justify-content: center;
+}
+
+.sidebar-footer .speed-readout--down {
+  /* Optical nudge — the down-arrow glyph + gap reads as slightly more
+     left-padded than the up-arrow side; a small shift balances it out. */
+  transform: translateX(-10px);
 }
 
 .filter-nav {
@@ -700,7 +718,7 @@ a:hover {
 .col-header {
   font-size: var(--type-label);
   font-weight: var(--weight-medium);
-  color: var(--color-text-secondary);
+  color: var(--color-text-header);
   letter-spacing: 0.02em;
   padding: 0;
   height: var(--height-colheader);
@@ -757,13 +775,18 @@ a:hover {
   transition: background var(--duration-fast) var(--ease-default);
 }
 
+/* Alternating row backgrounds — recommended by Apple HIG for wide
+   multi-column tables to help track values across columns */
+.torrent-row:nth-child(even) {
+  background: var(--color-bg-row-alt);
+}
+
 .torrent-row:hover {
   background: var(--color-bg-inset);
 }
 
 .torrent-row.row--selected {
   background: var(--color-accent-subtle);
-  border-left: var(--border-width-accent) solid var(--color-accent);
 }
 
 .torrent-row:focus-visible {
@@ -786,6 +809,7 @@ a:hover {
 /* Data cells base */
 .row-data {
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-data);
   color: var(--color-text-secondary);
   white-space: nowrap;
@@ -797,7 +821,7 @@ a:hover {
 .row-ratio    { width: 56px; text-align: right; }
 .row-eta      { width: 72px; text-align: right; padding-right: var(--space-3); }
 
-.row-peers              { color: var(--color-text-secondary); font-family: var(--font-data); font-size: var(--type-caption); }
+.row-peers              { color: var(--color-text-secondary); font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: var(--type-caption); }
 .row-peers.peers-active { color: var(--color-info); }
 .row-peers.peers-warn   { color: var(--color-warning); }
 .state-seeding .row-peers.peers-active { color: var(--color-success); }
@@ -928,7 +952,6 @@ a:hover {
   width: 0;
   overflow: hidden;
   background: var(--color-bg-overlay);
-  border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   transition: width var(--duration-slow) var(--ease-enter);
@@ -937,6 +960,7 @@ a:hover {
 
 #right-panel.right-panel--open {
   width: var(--width-inspector);
+  border-left: 1px solid var(--color-border);
 }
 
 .right-panel__content {
@@ -991,6 +1015,7 @@ a:hover {
 
 .log-entry__time {
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-data-sm);
   color: var(--color-text-secondary);
   flex-shrink: 0;
@@ -1372,6 +1397,8 @@ select.input.is-mixed,
 .checkbox-label {
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 100%;
   gap: var(--space-2);
   font-size: var(--type-body);
   color: var(--color-text-primary);
@@ -1384,7 +1411,7 @@ select.input.is-mixed,
 dialog {
   background: var(--color-bg-overlay);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-glass-md);
   padding: 0;
   max-width: 480px;
   width: 90vw;
@@ -1393,8 +1420,15 @@ dialog {
   margin: auto;
 }
 
+/* Alerts (simple confirm/destructive dialogs) read as compact cards in
+   Apple's own convention, not wide sheets — narrower than the general
+   form-modal width. */
+#modal-remove-confirm {
+  max-width: 360px;
+}
+
 dialog::backdrop {
-  background: rgba(30, 26, 21, 0.5);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 dialog[open] {
@@ -1505,6 +1539,27 @@ dialog[open] {
   padding: var(--space-3) var(--space-4);
 }
 
+/* Apple's own alert pattern — full-width pill buttons stacked vertically,
+   the likely/primary choice on top. DOM order stays Cancel-then-primary
+   (so native <dialog> default focus still lands on the safe Cancel
+   button), and column-reverse flips the VISUAL order only. */
+.modal-footer--stacked {
+  flex-direction: column-reverse;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.modal-footer--stacked .btn-secondary,
+.modal-footer--stacked .btn-destructive,
+.modal-footer--stacked .btn-primary {
+  width: 100%;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  justify-content: center;
+  font-size: var(--type-body);
+  font-weight: var(--weight-semibold);
+}
+
 /* ── §15  Context Menu ───────────────────────────────────────────── */
 
 .context-menu {
@@ -1550,7 +1605,9 @@ dialog[open] {
 .context-menu__item > .icon {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: 20px;
 }
 
 .context-menu__item > .icon > svg {
@@ -1836,10 +1893,18 @@ dialog[open] {
 }
 
 .toast {
-  background: var(--color-bg-overlay);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  /* Transient, floating system-feedback — same glass material as the
+     context menu/speed popover, not flat like a form or modal. Lower
+     opacity than glass-bg-strong: the toast sits bottom-right, away
+     from the ambient blobs, so a higher fill just looks flat/opaque
+     against the neutral background there — needs more see-through to
+     read as glass at all regardless of what's behind it. */
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-glass-md);
+  box-shadow: var(--glass-highlight), var(--shadow-md);
   padding: var(--space-2) var(--space-4);
   min-width: 280px;
   max-width: 320px;
@@ -1848,8 +1913,13 @@ dialog[open] {
   align-items: center;
   gap: var(--space-2);
   font-size: var(--type-body);
+  color: var(--color-text-primary);
   pointer-events: auto;
   animation: toast-enter var(--duration-deliberate) var(--ease-enter);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .toast { background: var(--color-bg-overlay); }
 }
 
 @keyframes toast-enter {
@@ -2065,6 +2135,7 @@ dialog[open] {
 
 .info-value--mono {
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-code);
 }
 
@@ -2168,6 +2239,7 @@ dialog[open] {
   font-size: var(--type-caption);
   color: var(--color-text-secondary);
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   white-space: nowrap;
   overflow: hidden;
   min-width: 0;
@@ -2377,6 +2449,7 @@ dialog[open] {
 
 .sp-alt-label {
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-data-sm);
   color: var(--color-text-secondary);
   width: 20px;
@@ -2603,6 +2676,7 @@ dialog[open] {
 .peer-addr {
   font-size: var(--type-caption);
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
 
@@ -2617,6 +2691,7 @@ dialog[open] {
 
 .peer-conn {
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-data-sm);
   color: var(--color-text-secondary);
   flex-shrink: 0;
@@ -2625,6 +2700,7 @@ dialog[open] {
 .peer-flags {
   font-size: var(--type-caption);
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   color: var(--color-accent);
   flex-shrink: 0;
   cursor: help;
@@ -2636,6 +2712,7 @@ dialog[open] {
   font-size: var(--type-caption);
   color: var(--color-text-secondary);
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
 }
 
 .peer-stat {
@@ -2657,6 +2734,7 @@ dialog[open] {
 .tracker-url {
   font-size: var(--type-code);
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
   word-break: break-all;
   margin-bottom: var(--space-1);
@@ -2809,6 +2887,7 @@ input[type="number"] {
 }
 .about-stat-value {
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   color: var(--color-text-primary);
 }
 .about-divider {
@@ -3154,6 +3233,7 @@ input[type="number"] {
 
   .mobile-chip__count {
     font-family: var(--font-data);
+    font-variant-numeric: tabular-nums;
     font-size: var(--type-data-sm);
     font-weight: var(--weight-regular);
     color: inherit;
@@ -3347,7 +3427,7 @@ input[type="number"] {
   position: fixed;
   inset: 0;
   z-index: calc(var(--z-modal) - 1);
-  background: rgba(30, 26, 21, 0.35); /* warm-800 at 35% — scrim, not a surface */
+  background: rgba(0, 0, 0, 0.35); /* neutral scrim, not a surface */
 }
 
 .sort-sheet-backdrop--hidden {
@@ -3481,6 +3561,7 @@ input[type="number"] {
   align-items: center;
   gap: var(--space-1);
   font-family: var(--font-data);
+  font-variant-numeric: tabular-nums;
   font-size: var(--type-data-sm);
   color: var(--color-text-secondary);
 }
@@ -3538,7 +3619,7 @@ input[type="number"] {
 .action-item .icon {
   color: var(--color-text-secondary);
   flex-shrink: 0;
-  width: 20px;
+  width: 26px;
   display: flex;
   align-items: center;
   justify-content: center;

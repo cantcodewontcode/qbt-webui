@@ -4,8 +4,8 @@ function formatSpeed(bytesPerSec) {
   const bps = bytesPerSec * 8;
   if (bps < 1000)          return Math.round(bps) + ' bps';
   if (bps < 1_000_000)     return Math.round(bps / 1000) + ' Kbps';
-  if (bps < 1_000_000_000) return (bps / 1_000_000).toFixed(1) + ' Mbps';
-  return (bps / 1_000_000_000).toFixed(2) + ' Gbps';
+  if (bps < 1_000_000_000) return Math.round(bps / 1_000_000) + ' Mbps';
+  return Math.round(bps / 1_000_000_000) + ' Gbps';
 }
 
 function formatSize(bytes) {

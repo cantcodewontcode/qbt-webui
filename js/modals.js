@@ -288,22 +288,39 @@ function mountAddModal() {
 
 let pendingRemoveIds = [];
 
-function openRemoveModal(ids) {
+function updateRemoveModalCopy() {
+  const ids   = pendingRemoveIds;
   const count = ids.length;
   const name  = state.torrents.get(ids[0])?.name || 'this torrent';
-  const desc  = count === 1
-    ? `Remove "${name}"?`
-    : `Remove ${count} torrents?`;
+  const deleteData = document.getElementById('remove-delete-data').checked;
+
+  document.getElementById('modal-remove-title').textContent =
+    count === 1 ? 'Remove Torrent' : 'Remove Torrents';
+
+  let target;
+  if (count === 1) {
+    const truncated = name.length > 32 ? name.slice(0, 32) + '…' : name;
+    target = `<strong>${esc(truncated)}</strong>`;
+  } else {
+    target = `<strong>${count} torrents</strong>`;
+  }
+
+  document.getElementById('modal-remove-desc').innerHTML =
+    `Remove torrent ${target}? You can't undo this action.`;
+  document.getElementById('btn-remove-confirm').textContent = deleteData ? 'Delete' : 'Remove';
+}
+
+function openRemoveModal(ids) {
+  pendingRemoveIds = ids;
 
   let savedDelete = false;
   try {
     const stored = localStorage.getItem('tx-remove-delete-data');
     if (stored !== null) savedDelete = stored === 'true';
   } catch (_) {}
-
-  document.getElementById('modal-remove-desc').textContent = desc;
   document.getElementById('remove-delete-data').checked = savedDelete;
-  pendingRemoveIds = ids;
+
+  updateRemoveModalCopy();
 
   document.getElementById('modal-remove-confirm').showModal();
 }
@@ -313,6 +330,8 @@ function mountRemoveModal() {
     const { ids, deleteData } = e.detail;
     openRemoveModal(ids, deleteData);
   });
+
+  document.getElementById('remove-delete-data').addEventListener('change', updateRemoveModalCopy);
 
   document.getElementById('btn-remove-confirm').addEventListener('click', async () => {
     const deleteData = document.getElementById('remove-delete-data').checked;
