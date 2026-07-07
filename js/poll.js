@@ -8,6 +8,38 @@ let consecutiveFailures = 0;
 let isPolling         = false;
 let pollTimer         = null;
 
+// ── Auto-rename: strip known indexer/release-site prefixes from torrent
+// names as a standing rule, regardless of who added the torrent.
+const AUTO_RENAME_PREFIXES = ['[Bitsearch.to] ', '[bitsearch.to] '];
+
+const autoRenamePending = new Set();
+
+function stripAutoRenamePrefix(name) {
+  for (const prefix of AUTO_RENAME_PREFIXES) {
+    if (name.startsWith(prefix)) return name.slice(prefix.length);
+  }
+  return null;
+}
+
+async function checkAutoRenamePrefixes() {
+  for (const [hash, t] of state.torrents) {
+    if (autoRenamePending.has(hash)) continue;
+    const stripped = stripAutoRenamePrefix(t.name || '');
+    if (stripped === null) continue;
+    autoRenamePending.add(hash);
+    try {
+      await torrentRename(hash, stripped);
+      const current = state.torrents.get(hash);
+      if (current) state.torrents.set(hash, { ...current, name: stripped });
+      emit('torrents:changed', null);
+    } catch (err) {
+      console.error('[auto-rename] failed for', hash, err);
+    } finally {
+      autoRenamePending.delete(hash);
+    }
+  }
+}
+
 function hasActiveTorrents() {
   for (const t of state.torrents.values()) {
     if ((t.dlspeed ?? 0) > 0 || (t.upspeed ?? 0) > 0) return true;
@@ -46,6 +78,8 @@ async function pollCycle() {
         emit('torrents:changed', null);
       }
     }
+
+    checkAutoRenamePrefixes();
 
     if (data.server_state) {
       setServerState(data.server_state);
@@ -118,6 +152,7 @@ async function _doInitialLoad() {
     emit('torrents:changed', null);
     try { localStorage.setItem('tx-torrent-count', String(state.torrents.size)); } catch (_) {}
     syncRid = 0;
+    checkAutoRenamePrefixes();
   } else {
     console.error('[init] torrents/info failed:', torrentsResult.reason?.message);
   }

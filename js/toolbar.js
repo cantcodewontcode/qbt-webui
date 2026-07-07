@@ -69,18 +69,61 @@ function mountSpeedReadouts() {
   });
 }
 
+// Positions a popover relative to its anchor, flipping to open above when
+// there isn't enough room below (anchors near the bottom of the viewport —
+// like the sidebar footer's speed readouts — never have room below them).
+// Always instant — the open/close lifecycle is what's animated (see
+// speed-popover-enter/exit below), not repositioning while already open.
+function positionPopover(popover, anchorEl) {
+  const gap  = 8;
+  const rect = anchorEl.getBoundingClientRect();
+
+  // Measure natural size before placing it — height/width don't depend on
+  // top/left, so this is safe to read immediately after appendChild.
+  const popRect = popover.getBoundingClientRect();
+
+  const fitsBelow = rect.bottom + gap + popRect.height <= window.innerHeight - gap;
+  const openAbove = !fitsBelow;
+  popover.classList.toggle('speed-popover--above', openAbove);
+
+  const top = openAbove
+    ? Math.max(gap, rect.top - gap - popRect.height)
+    : rect.bottom + gap;
+  const left = rect.left + rect.width / 2 - popRect.width / 2;
+
+  popover.style.top  = top + 'px';
+  popover.style.left = Math.max(gap, Math.min(left, window.innerWidth - popRect.width - gap)) + 'px';
+
+  // Position caret over the anchor button after layout
+  requestAnimationFrame(() => {
+    const finalRect = popover.getBoundingClientRect();
+    const caretEl    = popover.querySelector('.speed-popover__caret');
+    if (caretEl) {
+      const anchorCenter = rect.left + rect.width / 2;
+      const caretOffset  = anchorCenter - finalRect.left;
+      caretEl.style.left = Math.max(12, Math.min(caretOffset, finalRect.width - 12)) + 'px';
+    }
+  });
+}
+
 function openSpeedPopover(anchorEl, mode) {
   const wasSameAnchor = _popoverAnchor === anchorEl;
-  if (_popoverCleanup) { _popoverCleanup(); }
+  // Closing to make way for a different popover: immediate (no point
+  // animating something that's about to be replaced). Re-clicking the
+  // same anchor to toggle this one closed: animated, like any other close.
+  if (_popoverCleanup) { _popoverCleanup(!wasSameAnchor); }
   if (wasSameAnchor) return;
 
   const popover = buildLimitPopover(mode || 'dl');
   document.body.appendChild(popover);
+  positionPopover(popover, anchorEl);
 
-  const rect = anchorEl.getBoundingClientRect();
-  const left = rect.left + rect.width / 2 - 150;
-  popover.style.top  = (rect.bottom + 8) + 'px';
-  popover.style.left = Math.max(8, Math.min(left, window.innerWidth - 308)) + 'px';
+  // Toggling the limit on/off changes the popover's height (the value
+  // input row appears/disappears) — reposition instantly so it keeps
+  // growing away from the anchor instead of extending downward off-screen.
+  // No animation here on purpose — animation belongs to open/close below,
+  // not to sliding the box around on every toggle.
+  popover.addEventListener('popover:resize', () => positionPopover(popover, anchorEl));
 
   _popoverAnchor = anchorEl;
 
@@ -92,25 +135,21 @@ function openSpeedPopover(anchorEl, mode) {
   function onKeydown(e) {
     if (e.key === 'Escape') close();
   }
-  function close() {
-    popover.remove();
-    _popoverAnchor  = null;
-    _popoverCleanup = null;
+  // `immediate` skips the fade-out — used when a new popover is about to
+  // replace this one, so there's no point animating the old one away.
+  function close(immediate) {
     document.removeEventListener('click', onOutsideClick, true);
     document.removeEventListener('keydown', onKeydown);
+    _popoverAnchor  = null;
+    _popoverCleanup = null;
+    if (immediate) {
+      popover.remove();
+    } else {
+      popover.classList.add('speed-popover--closing');
+      popover.addEventListener('animationend', () => popover.remove(), { once: true });
+    }
   }
   _popoverCleanup = close;
-
-  // Position caret over the anchor button after layout
-  requestAnimationFrame(() => {
-    const popRect  = popover.getBoundingClientRect();
-    const caretEl  = popover.querySelector('.speed-popover__caret');
-    if (caretEl) {
-      const anchorCenter = rect.left + rect.width / 2;
-      const caretOffset  = anchorCenter - popRect.left;
-      caretEl.style.left = Math.max(12, Math.min(caretOffset, popRect.width - 12)) + 'px';
-    }
-  });
 
   setTimeout(() => {
     document.addEventListener('click', onOutsideClick, true);
@@ -165,6 +204,7 @@ function buildLimitPopover(mode) {
     const on  = e.target.checked;
     const sub = pop.querySelector(`#${subId}`);
     sub.hidden = !on;
+    pop.dispatchEvent(new CustomEvent('popover:resize'));
     if (on) {
       const val = parseFloat(pop.querySelector(`#${valId}`).value) || 10;
       await save({ [prefKey]: mbpsToBytes(val) || mbpsToBytes(10) });
@@ -185,7 +225,7 @@ function buildLimitPopover(mode) {
 
 function openAltSpeedPopover(anchorEl) {
   const wasSameAnchor = _popoverAnchor === anchorEl;
-  if (_popoverCleanup) { _popoverCleanup(); }
+  if (_popoverCleanup) { _popoverCleanup(!wasSameAnchor); }
   if (wasSameAnchor) return;
 
   const pop = document.createElement('div');
@@ -205,11 +245,7 @@ function openAltSpeedPopover(anchorEl) {
   `;
 
   document.body.appendChild(pop);
-
-  const rect = anchorEl.getBoundingClientRect();
-  const left = rect.left + rect.width / 2 - 150;
-  pop.style.top  = (rect.bottom + 8) + 'px';
-  pop.style.left = Math.max(8, Math.min(left, window.innerWidth - 308)) + 'px';
+  positionPopover(pop, anchorEl);
 
   _popoverAnchor = anchorEl;
 
@@ -219,24 +255,19 @@ function openAltSpeedPopover(anchorEl) {
   function onKeydown(e) {
     if (e.key === 'Escape') close();
   }
-  function close() {
-    pop.remove();
-    _popoverAnchor  = null;
-    _popoverCleanup = null;
+  function close(immediate) {
     document.removeEventListener('click', onOutsideClick, true);
     document.removeEventListener('keydown', onKeydown);
+    _popoverAnchor  = null;
+    _popoverCleanup = null;
+    if (immediate) {
+      pop.remove();
+    } else {
+      pop.classList.add('speed-popover--closing');
+      pop.addEventListener('animationend', () => pop.remove(), { once: true });
+    }
   }
   _popoverCleanup = close;
-
-  requestAnimationFrame(() => {
-    const popRect = pop.getBoundingClientRect();
-    const caretEl = pop.querySelector('.speed-popover__caret');
-    if (caretEl) {
-      const anchorCenter = rect.left + rect.width / 2;
-      const caretOffset  = anchorCenter - popRect.left;
-      caretEl.style.left = Math.max(12, Math.min(caretOffset, popRect.width - 12)) + 'px';
-    }
-  });
 
   pop.querySelector('[name="disable-alt"]').addEventListener('click', async () => {
     // Hide the indicator immediately — don't wait for server round-trip

@@ -364,30 +364,43 @@ function mountRemoveModal() {
 }
 
 function mountSetLocationModal() {
-  const modal  = document.getElementById('modal-set-location');
-  const pathEl = document.getElementById('set-location-path');
+  const modal      = document.getElementById('modal-set-location');
+  const pathEl     = document.getElementById('set-location-path');
+  const confirmBtn = document.getElementById('set-location-confirm');
 
   async function confirmSetLocation() {
     const path = pathEl.value.trim();
-    if (!path) return;
+    if (!path) {
+      pathEl.classList.add('is-error');
+      pathEl.focus();
+      return;
+    }
     const hashes = modal._pendingIds;
-    modal.close();
+    confirmBtn.disabled = true;
     try {
       await torrentSetLocation(hashes, path);
       await forceRefresh();
+      modal.close();
     } catch (err) {
       showToast('Failed to set location: ' + err.message, 'error');
+      pathEl.classList.add('is-error');
+      pathEl.focus();
+    } finally {
+      confirmBtn.disabled = false;
     }
   }
 
   document.addEventListener('modal:set-location', e => {
     const { ids, torrent } = e.detail;
     pathEl.value = torrent?.save_path ?? '';
+    pathEl.classList.remove('is-error');
     modal._pendingIds = ids;
     modal.showModal();
     pathEl.focus();
     pathEl.setSelectionRange(pathEl.value.length, pathEl.value.length);
   });
+
+  pathEl.addEventListener('input', () => pathEl.classList.remove('is-error'));
 
   pathEl.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); confirmSetLocation(); }
@@ -397,16 +410,18 @@ function mountSetLocationModal() {
     modal.close();
   });
 
-  document.getElementById('set-location-confirm').addEventListener('click', confirmSetLocation);
+  confirmBtn.addEventListener('click', confirmSetLocation);
 }
 
 function mountRenameModal() {
-  const modal   = document.getElementById('modal-rename');
-  const inputEl = document.getElementById('rename-input');
+  const modal      = document.getElementById('modal-rename');
+  const inputEl    = document.getElementById('rename-input');
+  const confirmBtn = document.getElementById('rename-confirm');
 
   document.addEventListener('modal:rename', e => {
     const { id, torrent } = e.detail;
     inputEl.value = torrent?.name ?? '';
+    inputEl.classList.remove('is-error');
     modal._pendingId      = id;
     modal._pendingTorrent = torrent;
     modal.showModal();
@@ -415,16 +430,27 @@ function mountRenameModal() {
 
   async function confirmRename() {
     const newName = inputEl.value.trim();
-    if (!newName) return;
+    if (!newName) {
+      inputEl.classList.add('is-error');
+      inputEl.focus();
+      return;
+    }
     const hash = modal._pendingId;
-    modal.close();
+    confirmBtn.disabled = true;
     try {
       await torrentRename(hash, newName);
       await forceRefresh();
+      modal.close();
     } catch (err) {
       showToast('Failed to rename: ' + err.message, 'error');
+      inputEl.classList.add('is-error');
+      inputEl.focus();
+    } finally {
+      confirmBtn.disabled = false;
     }
   }
+
+  inputEl.addEventListener('input', () => inputEl.classList.remove('is-error'));
 
   inputEl.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); confirmRename(); }
@@ -434,7 +460,7 @@ function mountRenameModal() {
     modal.close();
   });
 
-  document.getElementById('rename-confirm').addEventListener('click', confirmRename);
+  confirmBtn.addEventListener('click', confirmRename);
 }
 
 function mountSeedRatioModal() {
