@@ -107,7 +107,6 @@ function mountLog() {
     const logContent      = document.getElementById('log-content');
     const inspContent     = document.getElementById('inspector-content');
     const settingsContent = document.getElementById('settings-content');
-    const addContent      = document.getElementById('add-content');
 
     if (open) {
       closeInspectorSilent();
@@ -115,7 +114,6 @@ function mountLog() {
       document.removeEventListener('keydown', handleSettingsEsc);
       if (inspContent)     inspContent.hidden     = true;
       if (settingsContent) settingsContent.hidden = true;
-      if (addContent)      { addContent.hidden = true; resetAddModal(); }
       if (logContent)      logContent.hidden      = false;
 
       rightPanel.classList.add('right-panel--open');
@@ -125,7 +123,7 @@ function mountLog() {
       repositionLogChipIndicator();
     } else {
       if (logContent) logContent.hidden = true;
-      const anyVisible = [inspContent, settingsContent, addContent]
+      const anyVisible = [inspContent, settingsContent]
         .some(el => el && !el.hidden);
       if (!anyVisible) {
         rightPanel.classList.remove('right-panel--open');

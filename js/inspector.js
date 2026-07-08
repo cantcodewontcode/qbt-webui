@@ -180,8 +180,8 @@ function renderGeneral(t, container) {
     ['Added',          (t.added_on && t.added_on > 946684800) ? formatDate(t.added_on) : '—'],
     ['Completed',      (t.completion_on && t.completion_on > 946684800) ? formatDate(t.completion_on) : '—'],
     !isDone && ['Availability',   (t.availability != null && t.availability >= 0)
-      ? formatPercent(t.availability)
-      : (t.availability === -1 ? '100%' : '—')],
+      ? formatPercent(Math.min(1, t.availability))
+      : '—'],
     ['Last active',    (t.last_activity && t.last_activity > 946684800) ? formatDate(t.last_activity) : '—'],
     ['Connections',    connectionsText],
     ['Peers',          peersText],
@@ -651,7 +651,6 @@ function mountInspector() {
     const rightPanel      = document.getElementById('right-panel');
     const inspContent     = document.getElementById('inspector-content');
     const settingsContent = document.getElementById('settings-content');
-    const addContent      = document.getElementById('add-content');
     const logContent      = document.getElementById('log-content');
 
     if (!hash) {
@@ -672,7 +671,6 @@ function mountInspector() {
     state.logOpen = false;
     document.removeEventListener('keydown', handleSettingsEsc);
     if (settingsContent) settingsContent.hidden = true;
-    if (addContent) { addContent.hidden = true; resetAddModal(); }
     if (logContent) logContent.hidden = true;
 
     if (inspContent) inspContent.hidden = false;

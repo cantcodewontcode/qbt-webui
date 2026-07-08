@@ -602,7 +602,6 @@ function mountSettings() {
     const rightPanel      = document.getElementById('right-panel');
     const settingsContent = document.getElementById('settings-content');
     const inspContent     = document.getElementById('inspector-content');
-    const addContent      = document.getElementById('add-content');
     const logContent      = document.getElementById('log-content');
 
     if (open) {
@@ -610,7 +609,6 @@ function mountSettings() {
       closeInspectorSilent();
       state.logOpen = false;
       if (inspContent) inspContent.hidden = true;
-      if (addContent) { addContent.hidden = true; resetAddModal(); }
       if (logContent) logContent.hidden = true;
       if (settingsContent) settingsContent.hidden = false;
       rightPanel.classList.add('right-panel--open');
@@ -629,7 +627,7 @@ function mountSettings() {
     } else {
       if (settingsContent) settingsContent.hidden = true;
       // Only close the container if no other content is showing
-      const anyVisible = [inspContent, addContent, logContent].some(el => el && !el.hidden);
+      const anyVisible = [inspContent, logContent].some(el => el && !el.hidden);
       if (!anyVisible) {
         rightPanel.classList.remove('right-panel--open');
         rightPanel.setAttribute('aria-hidden', 'true');

@@ -166,29 +166,13 @@ function openAddModal() {
     });
     return; // ← skip desktop path
   }
-  // ── Desktop path continues below unchanged ──────────────────
-
-  const rightPanel      = document.getElementById('right-panel');
-  const addContent      = document.getElementById('add-content');
-  const inspContent     = document.getElementById('inspector-content');
-  const settingsContent = document.getElementById('settings-content');
-  const logContent      = document.getElementById('log-content');
-
-  // Silence other panels directly — no state events, no close-branch side effects
-  closeInspectorSilent();
-  state.settingsOpen = false;
-  state.logOpen = false;
-  document.removeEventListener('keydown', handleSettingsEsc);
-  if (inspContent)     inspContent.hidden     = true;
-  if (settingsContent) settingsContent.hidden = true;
-  if (logContent)      logContent.hidden      = true;
-  if (addContent)      addContent.hidden      = false;
-
-  rightPanel.classList.add('right-panel--open');
-  rightPanel.setAttribute('aria-hidden', 'false');
-
+  // ── Desktop path: a sheet, like Set Location/Rename/Seed Ratio — not
+  // a slot in the shared right-panel. It's a one-shot task, not something
+  // to keep pinned open alongside the list the way Inspector/Settings/Log
+  // are, so it no longer needs to silence those panels to take over.
   document.getElementById('add-download-dir').value =
     state.prefs?.save_path || '';
+  document.getElementById('modal-add-torrent').showModal();
 }
 
 
@@ -207,12 +191,7 @@ function handleFile(file) {
 }
 
 function closeAddPanel() {
-  const rightPanel = document.getElementById('right-panel');
-  const addContent = document.getElementById('add-content');
-  if (!addContent || addContent.hidden) return;
-  addContent.hidden = true;
-  rightPanel.classList.remove('right-panel--open');
-  rightPanel.setAttribute('aria-hidden', 'true');
+  document.getElementById('modal-add-torrent')?.close();
   resetAddModal();
 }
 
@@ -276,14 +255,10 @@ function mountAddModal() {
   });
 
   document.getElementById('btn-add-cancel')?.addEventListener('click', closeAddPanel);
-  document.getElementById('btn-add-close')?.addEventListener('click', closeAddPanel);
 
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      const addContent = document.getElementById('add-content');
-      if (addContent && !addContent.hidden) closeAddPanel();
-    }
-  });
+  // Covers every way the dialog can close (Cancel, Escape, successful add) —
+  // resets state once instead of needing each closer to remember to do it.
+  document.getElementById('modal-add-torrent')?.addEventListener('close', resetAddModal);
 }
 
 let pendingRemoveIds = [];
