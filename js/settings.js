@@ -625,12 +625,12 @@ function mountSettings() {
         console.error('[settings] app/preferences failed:', err);
       }
     } else {
-      if (settingsContent) settingsContent.hidden = true;
       // Only close the container if no other content is showing
       const anyVisible = [inspContent, logContent].some(el => el && !el.hidden);
       if (!anyVisible) {
-        rightPanel.classList.remove('right-panel--open');
-        rightPanel.setAttribute('aria-hidden', 'true');
+        closeRightPanel(rightPanel);
+      } else if (settingsContent) {
+        settingsContent.hidden = true;
       }
       document.removeEventListener('keydown', handleSettingsEsc);
     }

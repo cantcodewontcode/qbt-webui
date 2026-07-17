@@ -103,6 +103,21 @@ function setLogOpen(bool) {
   emit('ui:log', bool);
 }
 
+// Shared close path for the right panel (Inspector/Settings/Log) — waits
+// for the slide-out transition to finish before hiding content, so the
+// panel doesn't visually snap empty mid-animation.
+function closeRightPanel(rightPanel) {
+  if (!rightPanel) return;
+  rightPanel.classList.remove('right-panel--open');
+  rightPanel.setAttribute('aria-hidden', 'true');
+  const onEnd = (e) => {
+    if (e.target !== rightPanel || e.propertyName !== 'transform') return;
+    rightPanel.removeEventListener('transitionend', onEnd);
+    rightPanel.querySelectorAll('.right-panel__content').forEach(el => { el.hidden = true; });
+  };
+  rightPanel.addEventListener('transitionend', onEnd);
+}
+
 function setConnected(bool) {
   state.connected = bool;
   emit('connection:' + (bool ? 'restored' : 'error'), null);

@@ -78,6 +78,7 @@
      sheets) — never applied to content (rows, forms, modals). */
   --glass-bg:            rgba(255, 255, 255, 0.38);
   --glass-bg-strong:     rgba(255, 255, 255, 0.55);
+  --glass-bg-subtle:     rgba(255, 255, 255, 0.78);
   --glass-bg-selected:   rgba(255, 255, 255, 0.48);
   --glass-bg-hover:      rgba(255, 255, 255, 0.75);
   --glass-border:        rgba(255, 255, 255, 0.6);
@@ -346,16 +347,41 @@ a:hover {
     border-radius: var(--radius-glass-md);
   }
 
+  /* Deliberately NOT floating like #sidebar — per Apple's own Split View
+     diagram, only the sidebar reads as an inset floating card; Canvas and
+     Inspector are flush peers. But #app's padding is shared by the whole
+     shell, so a normal flex child would inherit that inset on all sides —
+     to get "flush to the true top/right/bottom, gapped only from the
+     canvas" the panel has to escape the padding entirely. Positioned
+     absolute against #app (which spans the full 100vh and is already
+     position:relative here) so top/right/bottom:0 reach the real window
+     edges, ignoring #app's padding — same technique the tablet breakpoint
+     already uses for its slide-over panel, just permanent here instead of
+     an overlay. */
   #right-panel {
-    margin-left: 0;
-    border-radius: var(--radius-glass-md);
-    transition: width var(--duration-slow) var(--ease-enter),
-                margin-left var(--duration-slow) var(--ease-enter);
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--width-inspector);
+    transform: translateX(100%);
+    transition: transform var(--duration-slow) var(--ease-enter);
   }
 
   #right-panel.right-panel--open {
-    margin-left: var(--space-3);
-    border: 1px solid var(--color-border);
+    transform: translateX(0);
+    border-left: 1px solid var(--glass-border);
+  }
+
+  /* Reserves the canvas-to-inspector gap by shrinking the canvas, since
+     the panel itself no longer participates in the flex layout at all.
+     Just the panel's own width, NOT + --space-3 — #app's own right
+     padding already supplies that --space-3 gap (the panel bypasses it
+     by sitting flush to the true edge, but the canvas doesn't bypass
+     anything, so its existing padding IS the gap; adding a second
+     --space-3 here double-counted it into a 24px gap instead of 12px). */
+  #main-area:has(#right-panel.right-panel--open) .content-pane {
+    margin-right: var(--width-inspector);
   }
 }
 
@@ -412,6 +438,17 @@ a:hover {
   align-items: center;
   width: 100%;
   max-width: 240px;
+  border-radius: var(--radius-pill);
+  transition: box-shadow var(--duration-fast) var(--ease-default);
+}
+
+/* Focus ring lives here, not on .search-input itself — Safari renders
+   seams/gaps in a box-shadow ring right at the corners when the shadowed
+   element also has backdrop-filter + a large border-radius (this pill
+   shape triggers exactly that combo). Moving the ring to this plain,
+   non-blurred wrapper avoids the compositing bug entirely. */
+.search-wrap:focus-within {
+  box-shadow: 0 0 0 2px var(--color-accent-subtle);
 }
 
 .search-input {
@@ -444,7 +481,6 @@ a:hover {
 .search-input:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-subtle);
 }
 
 .search-wrap > .icon:first-child,
@@ -460,25 +496,26 @@ a:hover {
   align-items: center;
 }
 
+/* iconClearCircle is a single filled shape (circle with the X cut out as
+   a transparent hole) — no separate background/border-radius needed here,
+   the icon draws its own circle. */
 .search-clear {
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  background: var(--color-text-disabled);
-  color: var(--color-text-inverse);
-  transition: background var(--duration-fast) var(--ease-default);
+  color: var(--color-text-disabled);
+  transition: color var(--duration-fast) var(--ease-default);
 }
 
 .search-clear svg {
-  width: 8px;
-  height: 8px;
+  width: 16px;
+  height: 16px;
 }
 
 .search-clear[hidden] {
@@ -486,7 +523,7 @@ a:hover {
 }
 
 .search-clear:hover {
-  background: var(--color-text-secondary);
+  color: var(--color-text-secondary);
 }
 
 
@@ -952,19 +989,25 @@ a:hover {
 
 /* ── §9b  Right Panel Container ──────────────────────────────────── */
 
+/* No width/transition here on purpose — every viewport tier now has its
+   own complete rule for those (mobile: display:none entirely; tablet and
+   desktop: absolute-positioned slide-over, see §3b and the tablet block
+   below). A leftover `width: 0` + `transition: width` here used to win by
+   sitting later in the file than the newer transform-based rules, which
+   silently broke the slide animation — it was animating width, not
+   transform, so the transitionend listener (which waits specifically for
+   the transform transition) never fired and the close never registered. */
 #right-panel {
-  width: 0;
   overflow: hidden;
-  background: var(--color-bg-overlay);
+  /* A gentle frost, not the vivid ambient-tinted glass the main sidebar
+     uses — matches how Apple's own inspector panels (Numbers, Keynote)
+     read: barely-there blur, mostly opaque, refined rather than vivid. */
+  background: var(--glass-bg-subtle);
+  backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur-sm)) saturate(var(--glass-saturate));
   display: flex;
   flex-direction: column;
-  transition: width var(--duration-slow) var(--ease-enter);
   flex-shrink: 0;
-}
-
-#right-panel.right-panel--open {
-  width: var(--width-inspector);
-  border-left: 1px solid var(--color-border);
 }
 
 .right-panel__content {
@@ -1054,57 +1097,93 @@ a:hover {
   width: 100%;
 }
 
+/* No title here — it was always redundant with the Name row in General.
+   No border-bottom either — the segmented control below reads as its own
+   self-contained control (like Numbers' Table/Cell/Text/Arrange picker),
+   not a tab bar hanging off a divider. */
 #inspector-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--color-border);
+  justify-content: flex-end;
+  padding: var(--space-2) var(--space-4) 0;
   flex-shrink: 0;
 }
 
-.inspector-title {
-  font-size: var(--type-body);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--color-text-primary);
-  flex: 1;
-  min-width: 0;
-}
-
-/* Inspector tab strip */
+/* Inspector tab strip — an actual segmented control (Apple's own
+   Table/Cell/Text/Arrange picker in Numbers/Keynote's inspector), not a
+   tab bar: a rounded pill track, no border above/below, with a solid
+   accent-filled pill sliding behind whichever segment is selected and its
+   label going white — not the app's usual translucent nav-indicator
+   highlight, which reads as a hint, not a fill. */
 #inspector-tabs {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
+  position: relative;
+  /* Overrides the shared width:100% from the #inspector-header/-tabs/-body
+     rule above — that plus this element's own margin would overflow the
+     panel by exactly the margin amount. */
+  width: auto;
+  /* A translucent tint, not the flat opaque --color-bg-inset — that read
+     as a solid grey box sitting on top of the frosted panel rather than
+     a track cut into it. */
+  background: color-mix(in srgb, var(--raw-neutral-700) 8%, transparent);
+  border-radius: var(--radius-pill);
+  padding: 3px;
+  margin: var(--space-2) var(--space-4) var(--space-3);
   flex-shrink: 0;
+}
+
+#inspector-tab-indicator {
+  /* Fill the full segment height (matches .inspector-tab's 28px) instead
+     of the shared .nav-indicator--h's 26px — that 2px shortfall centered
+     in the 34px track (28px segment + 3px padding top/bottom) read as an
+     inset pill floating inside its row instead of filling it. */
+  height: 28px;
+  background: var(--color-accent);
+  border-radius: var(--radius-pill);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
 .inspector-tab {
   flex: 1;
-  height: 40px;
+  height: 28px;
   font-size: var(--type-label);
   font-weight: var(--weight-medium);
   color: var(--color-text-secondary);
-  border-bottom: 2px solid transparent;
-  transition: color var(--duration-fast) var(--ease-default),
-              border-color var(--duration-fast) var(--ease-default);
+  transition: color var(--duration-fast) var(--ease-default);
   background: none;
-  border-top: none;
-  border-left: none;
-  border-right: none;
+  border: none;
   cursor: pointer;
+  position: relative;
+  z-index: 1;
 }
 
-.inspector-tab:hover {
+/* Clicking a <button> focuses it natively — without this, Safari's default
+   focus ring traces the just-clicked segment, which is always the active
+   one, reading as an unwanted border around the filled pill. */
+.inspector-tab:focus-visible {
+  outline: none;
+}
+
+/* Divider between adjacent UNselected segments only — matches the
+   reference: no line where a segment touches the filled active pill.
+   A single positive selector (rather than a base rule + a color-only
+   override) avoids a specificity fight — `.inspector-tab--active` alone
+   is one class, weaker than `:not(:last-child)`'s class+pseudo-class, so
+   an override on just that selector silently lost the cascade and the
+   line kept rendering on the active pill's right edge. */
+.inspector-tab:not(:last-child):not(.inspector-tab--active):not(:has(+ .inspector-tab--active)) {
+  border-right: 1px solid var(--color-border);
+}
+
+.inspector-tab:hover:not(.inspector-tab--active) {
   color: var(--color-text-primary);
 }
 
 .inspector-tab--active,
 .inspector-tab[aria-selected="true"] {
-  color: var(--color-text-primary);
-  border-bottom-color: var(--color-accent);
+  color: var(--color-text-inverse);
 }
 
 /* Inspector tab panels */
@@ -1957,30 +2036,28 @@ dialog[open] {
 
 
 
-/* ── §19  State Badges ───────────────────────────────────────────── */
+/* ── §19  State Text ─────────────────────────────────────────────── */
 
-.state-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 18px;
-  padding: 0 6px;
-  border-radius: var(--radius-sm);
-  font-size: var(--type-caption);
+/* Plain colored text, not a filled chip — a solid saturated pill was the
+   loudest thing on the tab, competing with the name heading for
+   attention, and its old --radius-sm (2px, near-square) read as a
+   leftover from a pre-glass pass next to this app's otherwise soft
+   10-14px radii. Apple's own inspectors (Finder Get Info, Xcode) don't
+   badge a plain status word either — color alone is enough to scan. */
+.state-text {
   font-weight: var(--weight-medium);
-  white-space: nowrap;
 }
 
-.state-badge--downloading { background: color-mix(in srgb, var(--color-info)     15%, transparent); color: var(--color-info); }
-.state-badge--seeding     { background: color-mix(in srgb, var(--color-success)  15%, transparent); color: var(--color-success); }
-.state-badge--paused      { background: var(--color-bg-inset); color: var(--color-text-secondary); }
-.state-badge--queued      { background: var(--color-bg-inset); color: var(--color-text-secondary); }
-.state-badge--checking    { background: color-mix(in srgb, var(--color-info)     15%, transparent); color: var(--color-info); }
-.state-badge--error       { background: color-mix(in srgb, var(--color-critical) 15%, transparent); color: var(--color-critical); }
-.state-badge--missing     { background: color-mix(in srgb, var(--color-critical) 15%, transparent); color: var(--color-critical); }
-.state-badge--stalled     { background: color-mix(in srgb, var(--color-warning)  15%, transparent); color: var(--color-warning); }
-.state-badge--metadata    { background: color-mix(in srgb, var(--color-info)     15%, transparent); color: var(--color-info); }
-.state-badge--finished    { background: var(--color-bg-inset); color: var(--color-text-secondary); }
+.state-text--downloading { color: var(--color-info); }
+.state-text--seeding     { color: var(--color-success); }
+.state-text--paused      { color: var(--color-text-secondary); }
+.state-text--queued      { color: var(--color-text-secondary); }
+.state-text--checking    { color: var(--color-info); }
+.state-text--error       { color: var(--color-critical); }
+.state-text--missing     { color: var(--color-critical); }
+.state-text--stalled     { color: var(--color-warning); }
+.state-text--metadata    { color: var(--color-info); }
+.state-text--finished    { color: var(--color-text-secondary); }
 
 
 /* ── §20  Toggle Switch ──────────────────────────────────────────── */
@@ -2123,16 +2200,41 @@ dialog[open] {
 
 /* ── §23  Inspector Field Rows ───────────────────────────────────── */
 
-.info-row {
+/* Full-width identity heading — replaces "Name" as just another info-row;
+   the torrent's name is what a user is scanning for first and deserves
+   more visual weight than its metadata. Wrapped in a row with its own
+   edit button, same pattern as .info-row--editable below. */
+.inspector-name-row {
   display: flex;
-  gap: var(--space-4);
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-border-subtle);
-  font-size: var(--type-body-sm);
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  position: relative;
 }
 
-.info-row:last-child {
-  border-bottom: none;
+.inspector-name {
+  flex: 1;
+  font-size: var(--type-heading-1);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+/* Rows no longer divide from each other — only .inspector-section-title's
+   own border-top marks a break, so a line now means "new section" instead
+   of just "new row," which was pure visual noise at this density. No
+   horizontal padding either — .inspector-panel already insets 16px on
+   both sides; adding another 16px here doubled it to 32px and misaligned
+   every row against the (unpadded) name heading above them by exactly
+   that much on both edges. */
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  font-size: var(--type-body-sm);
+  position: relative;
 }
 
 .info-label {
@@ -2152,6 +2254,44 @@ dialog[open] {
   font-family: var(--font-data);
   font-variant-numeric: tabular-nums;
   font-size: var(--type-code);
+}
+
+/* Persistent edit affordance, right-aligned and vertically centered with
+   the field it edits — Location's path and the name heading are the two
+   fields users actually want to change from here; everything else is
+   read-only telemetry. Reuses the same context-menu icons
+   (iconRename/iconFolderOpen) so the action reads as familiar rather than
+   introducing a third "edit" glyph. */
+.inspector-edit-btn,
+.info-row-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  margin-left: auto;
+  border-radius: var(--radius-glass-sm);
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-default),
+              color var(--duration-fast) var(--ease-default);
+}
+
+/* No hover background circle — just the glyph itself darkening to near-
+   black, a subtler affordance than the usual glass-bubble icon-button
+   hover used elsewhere. */
+.inspector-edit-btn:hover,
+.info-row-edit-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.inspector-edit-btn:focus-visible,
+.info-row-edit-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--color-border-strong);
 }
 
 /* Inspector section heading — see §28 for current definition */
@@ -2591,39 +2731,87 @@ dialog[open] {
   padding: 0;
 }
 
-/* Section title — override §23 with semibold + top margin */
+/* Section title — override §23 with semibold + top margin. The border-top
+   marks the start of a new grouped block (see .inspector-section, §24)
+   rather than a continuation of the previous section's rows — matches how
+   Apple's own inspector panels (Numbers, Keynote Format inspector)
+   separate "Table Options" / "Headers & Footer" / etc. */
 .inspector-section-title {
   font-size: var(--type-label);
   font-weight: var(--weight-semibold);
   color: var(--color-text-secondary);
   letter-spacing: 0.02em;
-  margin: var(--space-4) 0 var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-subtle);
   text-transform: none;
 }
 
-.inspector-setting-row {
+.inspector-section:first-child .inspector-section-title {
+  padding-top: 0;
+  border-top: none;
+}
+
+/* Default: label stacked above its control. Used as-is by Seeding Ratio
+   Limit (no label at all now — the section title says it, one field
+   doesn't need its own redundant label too) — its select previously sat
+   inline beside a label and a ratio input, which forced it below its
+   min-content width and triggered a horizontal-scroll bug (a <select>'s
+   default min-width is auto, floored at its widest OPTION's rendered
+   width regardless of flex-shrink). */
+.inspector-field {
+  padding: var(--space-2) 0;
+}
+
+.inspector-field-label {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) 0;
   font-size: var(--type-body-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-2);
 }
 
-.inspector-setting-row label {
-  min-width: 130px;
-  display: inline-flex;
+/* Speed Limits' checkbox+label reads fine beside its (short) input, so it
+   stays a single row instead of stacking — two compact rows read cleaner
+   here than four. */
+.inspector-field--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.inspector-field--row .inspector-field-label {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.inspector-field-control {
+  display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.inspector-field-unit {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm);
 }
 
 .insp-ratio-input {
   width: 64px;
+  flex-shrink: 0;
 }
 
-/* .insp-select base styles are now covered by the unified select rule in §13 */
+/* .insp-select base styles are now covered by the unified select rule in
+   §13. min-width:0 lets it actually shrink to fit its row instead of
+   refusing to go below its widest option's intrinsic width. */
 .insp-select {
   height: 28px;
   font-size: var(--type-body-sm);
+  flex: 1;
+  min-width: 0;
 }
 
 .inspector-empty {

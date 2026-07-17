@@ -1,15 +1,12 @@
-# Agent and sprint instruction files
+# Agent and sprint instruction files — genuinely ephemeral one-off task
+# orders, kept out of git on purpose. (BACKLOG.md/WORKLOG.md used to be
+# lumped in here too — moved below. "Not in git" has meant "gone forever"
+# twice now when a VM died with uncommitted state, so anything that's a
+# standing project record rather than a disposable task order belongs in
+# version control instead.)
 AGENT_*.md
 PROMPT_*.md
 NOTES_*.md
-BACKLOG.md
-WORKLOG.md
 
 # macOS
 .DS_Store
-
-# Reference docs (internal, not part of the UI itself)
-DESIGN_SYSTEM.md
-QBITTORRENT_API.md
-FEATURE_DELTA.md
-NGINX_UPDATE.md

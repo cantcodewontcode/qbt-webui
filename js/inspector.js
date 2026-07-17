@@ -17,7 +17,7 @@ let _mobileContainer = null;
 
 function renderStateBadge(t) {
   const mod = torrentStateClass(t).replace('state-', '');
-  return `<span class="state-badge state-badge--${mod}">${torrentStateLabel(t)}</span>`;
+  return `<span class="state-text state-text--${mod}">${torrentStateLabel(t)}</span>`;
 }
 
 function renderSpeedLimits(t) {
@@ -27,44 +27,57 @@ function renderSpeedLimits(t) {
   const ulEnabled = (t.up_limit ?? -1) > 0;
   const ulMbps    = ulEnabled ? bytesToMbps(t.up_limit) : '';
   return `
-  <div class="inspector-section-title">Speed limits</div>
-  <div class="inspector-setting-row">
-    <label>
-      <input type="checkbox" id="insp-dl-limited"${dlEnabled ? ' checked' : ''}>
-      Download limit
-    </label>
-    <input type="number" id="insp-dl-limit" class="input settings-input"
-           value="${dlMbps}"${!dlEnabled ? ' disabled' : ''}> Mbps
-  </div>
-  <div class="inspector-setting-row">
-    <label>
-      <input type="checkbox" id="insp-ul-limited"${ulEnabled ? ' checked' : ''}>
-      Upload limit
-    </label>
-    <input type="number" id="insp-ul-limit" class="input settings-input"
-           value="${ulMbps}"${!ulEnabled ? ' disabled' : ''}> Mbps
+  <div class="inspector-section">
+    <div class="inspector-section-title">Speed Limits</div>
+    <div class="inspector-field inspector-field--row">
+      <label class="inspector-field-label">
+        <input type="checkbox" id="insp-dl-limited"${dlEnabled ? ' checked' : ''}>
+        Download limit
+      </label>
+      <div class="inspector-field-control">
+        <input type="number" id="insp-dl-limit" class="input settings-input"
+               value="${dlMbps}"${!dlEnabled ? ' disabled' : ''}>
+        <span class="inspector-field-unit">Mbps</span>
+      </div>
+    </div>
+    <div class="inspector-field inspector-field--row">
+      <label class="inspector-field-label">
+        <input type="checkbox" id="insp-ul-limited"${ulEnabled ? ' checked' : ''}>
+        Upload limit
+      </label>
+      <div class="inspector-field-control">
+        <input type="number" id="insp-ul-limit" class="input settings-input"
+               value="${ulMbps}"${!ulEnabled ? ' disabled' : ''}>
+        <span class="inspector-field-unit">Mbps</span>
+      </div>
+    </div>
   </div>`;
 }
 
 function renderSeedLimits(t) {
-  // ratio_limit: -1=global, -2=no limit, >=0=specific
-  const ratioLimit = t.ratio_limit ?? -1;
+  // Real qBittorrent setShareLimits semantics (confirmed against the
+  // official Web API wiki): -2 = use global limit, -1 = no limit (seed
+  // forever), >=0 = specific ratio.
+  const ratioLimit = t.ratio_limit ?? -2;
   let mode;
-  if (ratioLimit === -2)     mode = 'forever';
+  if (ratioLimit === -1)     mode = 'forever';
   else if (ratioLimit >= 0)  mode = 'specific';
   else                       mode = 'global';
   const ratioVal = ratioLimit >= 0 ? ratioLimit.toFixed(2) : '2.00';
   return `
-  <div class="inspector-section-title">Seeding</div>
-  <div class="inspector-setting-row">
-    <label for="insp-ratio-mode">Ratio limit</label>
-    <select id="insp-ratio-mode" class="insp-select">
-      <option value="global"${mode === 'global' ? ' selected' : ''}>Use global setting</option>
-      <option value="specific"${mode === 'specific' ? ' selected' : ''}>Stop seeding at ratio</option>
-      <option value="forever"${mode === 'forever' ? ' selected' : ''}>Seed forever</option>
-    </select>
-    <input type="text" inputmode="decimal" id="insp-ratio-limit" class="input settings-input insp-ratio-input"
-           value="${ratioVal}"${mode !== 'specific' ? ' disabled' : ''}>
+  <div class="inspector-section">
+    <div class="inspector-section-title">Seeding Ratio Limit</div>
+    <div class="inspector-field">
+      <div class="inspector-field-control">
+        <select id="insp-ratio-mode" class="insp-select">
+          <option value="global"${mode === 'global' ? ' selected' : ''}>Use global setting</option>
+          <option value="specific"${mode === 'specific' ? ' selected' : ''}>Stop seeding at ratio</option>
+          <option value="forever"${mode === 'forever' ? ' selected' : ''}>Seed forever</option>
+        </select>
+        <input type="text" inputmode="decimal" id="insp-ratio-limit" class="input settings-input insp-ratio-input"
+               value="${ratioVal}"${mode !== 'specific' ? ' disabled' : ''}>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -111,8 +124,8 @@ function wireGeneralControls(t, container) {
   rMode?.addEventListener('change', () => {
     const mode = rMode.value;
     if (rLimit) rLimit.disabled = mode !== 'specific';
-    if (mode === 'global')   torrentSetShareLimits([t.hash], -1, -1);
-    else if (mode === 'forever') torrentSetShareLimits([t.hash], -2, -1);
+    if (mode === 'global')   torrentSetShareLimits([t.hash], -2, -1);
+    else if (mode === 'forever') torrentSetShareLimits([t.hash], -1, -1);
   });
 
   rLimit?.addEventListener('change', () => {
@@ -129,6 +142,10 @@ function wireGeneralControls(t, container) {
 function renderGeneral(t, container) {
   const props = t._props || {};
 
+  // num_seeds/num_leechs describe what your CONNECTED peers are (how many
+  // already have the full file vs are still downloading) — not a transfer
+  // direction, so ↑/↓ arrows here were actively misleading next to
+  // dlspeed/upspeed's identical arrows, which DO mean direction.
   const connected    = (t.num_leechs ?? 0) + (t.num_seeds ?? 0);
   const swarmSeeds   = t.num_complete ?? 0;
   const swarmLeechs  = t.num_incomplete ?? 0;
@@ -136,81 +153,121 @@ function renderGeneral(t, container) {
   const peersText = connected === 0
     ? 'None'
     : swarmTotal > 0
-      ? `${connected} connected of ${swarmTotal} (${t.num_seeds ?? 0}↑ / ${t.num_leechs ?? 0}↓ connected, ${swarmSeeds} seeds in swarm)`
-      : `${connected} connected (${t.num_seeds ?? 0} seeds, ${t.num_leechs ?? 0} leeches)`;
+      ? `${connected} connected of ${swarmTotal} (${t.num_seeds ?? 0} seeds, ${t.num_leechs ?? 0} leechers)`
+      : `${connected} connected (${t.num_seeds ?? 0} seeds, ${t.num_leechs ?? 0} leechers)`;
 
   const connectionsText = props.nb_connections != null
     ? `${props.nb_connections} (max: ${props.nb_connections_limit})`
     : '—';
 
-  const isDone = (t.progress ?? 0) >= 1;
+  const isDone    = (t.progress ?? 0) >= 1;
+  const isSeeding = torrentStateClass(t) === 'state-seeding';
 
-  const rows = [
-    ['Name',           t.name || '—'],
-    ['State',          renderStateBadge(t)],
-    ['Size',           formatSize(t.total_size ?? t.size ?? 0)],
-    ['Progress',       formatPercent(t.progress ?? 0)],
-    !isDone && ['Remaining',      (t.amount_left != null && t.amount_left > 0) ? formatSize(t.amount_left) : '—'],
-    !isDone && ['Downloaded',     formatSize(props.total_downloaded ?? t.downloaded ?? 0)],
-    ['Uploaded',       formatSize(props.total_uploaded ?? t.uploaded ?? 0)],
-    ['Ratio',          formatRatio(t.ratio ?? 0)],
-    !isDone && ['Download speed', formatSpeed(t.dlspeed ?? 0)],
-    ['Upload speed',   formatSpeed(t.upspeed ?? 0)],
-    !isDone && ['ETA',            (() => {
-      const sc = torrentStateClass(t);
-      if (sc === 'state-finished') return '—';
-      if (sc === 'state-seeding') {
-        let limit = null;
-        if ((t.ratio_limit ?? -2) >= 0) {
-          limit = t.ratio_limit;
-        } else if ((t.ratio_limit ?? -2) === -1) {
-          const ge = state.prefs?.max_ratio_enabled ?? false;
-          const gr = state.prefs?.max_ratio ?? null;
-          if (ge && gr != null && gr > 0) limit = gr;
-        }
-        if (limit === null) return '—';
-        const remaining = limit * (t.size || 0) - (t.uploaded ?? 0);
-        if (remaining <= 0) return 'Done';
-        const spd = t.upspeed ?? 0;
-        return spd > 0 ? formatETA(Math.round(remaining / spd)) : '—';
+  const etaValue = (() => {
+    const sc = torrentStateClass(t);
+    if (sc === 'state-finished') return '—';
+    if (sc === 'state-seeding') {
+      let limit = null;
+      if ((t.ratio_limit ?? -2) >= 0) {
+        limit = t.ratio_limit;
+      } else if ((t.ratio_limit ?? -2) === -2) {
+        const ge = state.prefs?.max_ratio_enabled ?? false;
+        const gr = state.prefs?.max_ratio ?? null;
+        if (ge && gr != null && gr > 0) limit = gr;
       }
-      return formatETA(t.eta ?? -1);
-    })()],
-    ['Location',       `<span class="info-value--mono">${esc((() => { if (!t.content_path) return t.save_path || '—'; const i = t.content_path.lastIndexOf('/' + (t.name || '')); return i > 0 ? t.content_path.substring(0, i) : t.save_path || t.content_path; })())}</span>`],
-    ['Added',          (t.added_on && t.added_on > 946684800) ? formatDate(t.added_on) : '—'],
-    ['Completed',      (t.completion_on && t.completion_on > 946684800) ? formatDate(t.completion_on) : '—'],
-    !isDone && ['Availability',   (t.availability != null && t.availability >= 0)
-      ? formatPercent(Math.min(1, t.availability))
-      : '—'],
-    ['Last active',    (t.last_activity && t.last_activity > 946684800) ? formatDate(t.last_activity) : '—'],
-    ['Connections',    connectionsText],
-    ['Peers',          peersText],
-    ['Tracker',        esc(t.tracker || '—')],
-    ['Trackers',       t.trackers_count != null ? String(t.trackers_count) : '—'],
-  ].filter(Boolean);
+      if (limit === null) return '—';
+      const remaining = limit * (t.size || 0) - (t.uploaded ?? 0);
+      if (remaining <= 0) return 'Done';
+      const spd = t.upspeed ?? 0;
+      return spd > 0 ? formatETA(Math.round(remaining / spd)) : '—';
+    }
+    return formatETA(t.eta ?? -1);
+  })();
 
-  let html = rows.map(([label, value]) =>
-    `<div class="info-row">
-     <span class="info-label">${label}</span>
-     <span class="info-value">${value}</span>
-   </div>`
-  ).join('');
+  const locationValue = `<span class="info-value--mono">${esc((() => {
+    if (!t.content_path) return t.save_path || '—';
+    const i = t.content_path.lastIndexOf('/' + (t.name || ''));
+    return i > 0 ? t.content_path.substring(0, i) : t.save_path || t.content_path;
+  })())}</span>`;
 
-  if (t.magnet_uri) {
-    html += `<div class="info-row">
-    <span class="info-label">Magnet</span>
-    <span class="info-value">
-      <button class="btn-ghost btn--sm" id="btn-copy-magnet" aria-label="Copy magnet link">
-        ${iconCopy(14)} Copy link
-      </button>
-    </span>
+  const magnetRow = t.magnet_uri ? ['Magnet', `
+    <button class="btn-ghost btn--sm" id="btn-copy-magnet" aria-label="Copy magnet link">
+      ${iconCopy(14)} Copy link
+    </button>`] : null;
+
+  // Grouped like Apple's own inspector panels (Numbers/Keynote Format
+  // inspector) — labeled sections instead of one long undifferentiated
+  // list. Identity gets no header, same as those panels' top style row.
+  // Location/Added/Completed/Last active live here too, not in their own
+  // "Location & Activity" section — they're static facts about the
+  // torrent (where it lives, when things happened), not live activity the
+  // way Transfer's numbers are; qBittorrent's own desktop client groups
+  // this same data as "Information" alongside size/save path for the same
+  // reason. Name itself isn't a row at all — it gets its own full-width
+  // heading above these sections instead.
+  const sections = [
+    { title: null, rows: [
+      ['State',       renderStateBadge(t)],
+      ['Size',        formatSize(t.total_size ?? t.size ?? 0)],
+      ['Location',    locationValue, 'set-location'],
+      ['Added',       (t.added_on && t.added_on > 946684800) ? formatDate(t.added_on) : '—'],
+      (t.completion_on && t.completion_on > 946684800) && ['Completed', formatDate(t.completion_on)],
+      ['Last active', (t.last_activity && t.last_activity > 946684800) ? formatDate(t.last_activity) : '—'],
+    ].filter(Boolean)},
+    { title: 'Transfer', rows: [
+      !isSeeding && ['Progress', formatPercent(t.progress ?? 0)],
+      !isDone && ['Remaining',      (t.amount_left != null && t.amount_left > 0) ? formatSize(t.amount_left) : '—'],
+      !isDone && ['Downloaded',     formatSize(props.total_downloaded ?? t.downloaded ?? 0)],
+      ['Uploaded',       formatSize(props.total_uploaded ?? t.uploaded ?? 0)],
+      ['Ratio',          formatRatio(t.ratio ?? 0)],
+      !isDone && ['Download speed', formatSpeed(t.dlspeed ?? 0)],
+      ['Upload speed',   formatSpeed(t.upspeed ?? 0)],
+      !isDone && ['ETA', etaValue],
+      // Availability is computed only from peers you're actually connected
+      // to (libtorrent has no way to know what pieces a peer has until
+      // it's talked to them) — pairing it with the swarm's total seed
+      // count tells you whether a low reading means "no complete copy
+      // exists yet" (0 seeds) or "one exists, you're just not connected to
+      // it yet" (seeds > 0). A single connected seed alone guarantees 100%.
+      !isDone && ['Availability', (t.availability != null && t.availability >= 0)
+        ? `${formatPercent(Math.min(1, t.availability))} (${swarmSeeds} seed${swarmSeeds === 1 ? '' : 's'} in swarm)`
+        : '—'],
+    ].filter(Boolean)},
+    { title: 'Network', rows: [
+      ['Connections', connectionsText],
+      ['Peers',       peersText],
+      magnetRow,
+    ].filter(Boolean)},
+  ];
+
+  let html = `<div class="inspector-name-row">
+    <div class="inspector-name">${esc(t.name || '—')}</div>
+    <button class="inspector-edit-btn" data-edit-action="rename" aria-label="Rename torrent" title="Rename">
+      ${iconRename(13)}
+    </button>
   </div>`;
-  }
+  html += sections.map(section => {
+    const rowsHtml = section.rows.map(([label, value, editAction]) => {
+      const editBtn = editAction
+        ? `<button class="info-row-edit-btn" data-edit-action="${editAction}" aria-label="Edit ${label.toLowerCase()}" title="Edit ${label.toLowerCase()}">${iconFolderOpen(13)}</button>`
+        : '';
+      return `<div class="info-row${editAction ? ' info-row--editable' : ''}">
+       <span class="info-label">${label}</span>
+       <span class="info-value">${value}</span>
+       ${editBtn}
+     </div>`;
+    }).join('');
+    const titleHtml = section.title
+      ? `<div class="inspector-section-title">${section.title}</div>`
+      : '';
+    return `<div class="inspector-section">${titleHtml}${rowsHtml}</div>`;
+  }).join('');
 
   html += renderSpeedLimits(t);
   html += renderSeedLimits(t);
 
-  findEl('tab-general', container).innerHTML = html;
+  const panel = findEl('tab-general', container);
+  panel.innerHTML = html;
 
   const copyBtn = findEl('btn-copy-magnet', container);
   if (copyBtn) {
@@ -221,6 +278,16 @@ function renderGeneral(t, container) {
       }).catch(() => {});
     });
   }
+
+  panel.querySelectorAll('[data-edit-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.editAction === 'rename') {
+        document.dispatchEvent(new CustomEvent('modal:rename', { detail: { id: t.hash, torrent: t } }));
+      } else if (btn.dataset.editAction === 'set-location') {
+        document.dispatchEvent(new CustomEvent('modal:set-location', { detail: { ids: [t.hash], torrent: t } }));
+      }
+    });
+  });
 
   wireGeneralControls(t, container);
 }
@@ -540,6 +607,13 @@ function setActiveTab(tab, container) {
     btn.classList.toggle('inspector-tab--active', active);
     btn.setAttribute('aria-selected', String(active));
   });
+  // No-ops safely on the mobile tab bar, which has no indicator element.
+  positionNavIndicator(
+    root.querySelector('#inspector-tabs'),
+    '.inspector-tab--active',
+    root.querySelector('#inspector-tab-indicator'),
+    true
+  );
 
   root.querySelectorAll('.inspector-panel').forEach(p => {
     p.classList.add('inspector-panel--hidden');
@@ -655,9 +729,7 @@ function mountInspector() {
 
     if (!hash) {
       if (inspContent && !inspContent.hidden) {
-        inspContent.hidden = true;
-        rightPanel.classList.remove('right-panel--open');
-        rightPanel.setAttribute('aria-hidden', 'true');
+        closeRightPanel(rightPanel);
       }
       inspectorPeerRid  = 0;
       inspectorFiles    = [];
@@ -679,9 +751,6 @@ function mountInspector() {
 
     const torrent = state.torrents.get(hash);
     if (!torrent) return;
-
-    const titleEl = document.getElementById('inspector-title');
-    if (titleEl) titleEl.textContent = torrent.name || '—';
 
     const activePanel = document.getElementById(`tab-${activeTab}`);
     if (activePanel) activePanel.innerHTML = '<p class="inspector-empty">Loading…</p>';
@@ -722,10 +791,10 @@ function mountInspector() {
     if (state.inspectorId === null) return;
     const t = state.torrents.get(state.inspectorId);
     if (!t) return;
-    const titleEl = _mobileContainer
-      ? document.querySelector('#sort-sheet .sort-sheet__title')
-      : document.getElementById('inspector-title');
-    if (titleEl) titleEl.textContent = t.name || '—';
+    if (_mobileContainer) {
+      const titleEl = document.querySelector('#sort-sheet .sort-sheet__title');
+      if (titleEl) titleEl.textContent = t.name || '—';
+    }
     // Files tab data comes from getTorrentFiles, not torrents:changed — skip it
     if (activeTab === 'files') return;
     if (activeTab === 'general' && !t._props) return;

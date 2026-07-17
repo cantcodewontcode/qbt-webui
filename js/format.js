@@ -36,7 +36,14 @@ function formatRatio(ratio) {
 
 function formatDate(unixTs) {
   if (!unixTs) return '—';
-  return new Date(unixTs * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const date = new Date(unixTs * 1000);
+  const startOfDay = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const daysAgo = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000);
+
+  if (daysAgo === 0) return 'Today';
+  if (daysAgo >= 1 && daysAgo <= 7) return `${daysAgo} day${daysAgo === 1 ? '' : 's'} ago`;
+
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
 function formatDuration(seconds) {
@@ -112,7 +119,7 @@ function torrentStateLabel(torrent) {
     case 'state-finished':    return 'Finished';
     case 'state-queued':      return 'Queued';
     case 'state-downloading': return 'Downloading';
-    case 'state-seeding':         return 'Seeding';
+    case 'state-seeding':         return torrent.super_seeding ? 'Super Seeding' : 'Seeding';
     default:                  return 'Unknown';
   }
 }

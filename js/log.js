@@ -122,12 +122,12 @@ function mountLog() {
       await loadLog();
       repositionLogChipIndicator();
     } else {
-      if (logContent) logContent.hidden = true;
       const anyVisible = [inspContent, settingsContent]
         .some(el => el && !el.hidden);
       if (!anyVisible) {
-        rightPanel.classList.remove('right-panel--open');
-        rightPanel.setAttribute('aria-hidden', 'true');
+        closeRightPanel(rightPanel);
+      } else if (logContent) {
+        logContent.hidden = true;
       }
     }
   });

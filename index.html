@@ -171,7 +171,7 @@
                    aria-label="Filter torrents by name">
             <button class="search-clear" id="search-clear"
                     aria-label="Clear search" hidden>
-              <span class="icon--x"></span>
+              <span class="icon--search-clear"></span>
             </button>
           </div>
         </div>
@@ -205,12 +205,12 @@
       <!-- Inspector content -->
       <div id="inspector-content" class="right-panel__content" hidden>
         <div id="inspector-header">
-          <span id="inspector-title" class="inspector-title">—</span>
           <button class="btn-ghost icon-btn" id="btn-inspector-close" aria-label="Close inspector">
             <span class="icon icon--x" aria-hidden="true"></span>
           </button>
         </div>
         <nav id="inspector-tabs" role="tablist" aria-label="Inspector sections">
+          <div class="nav-indicator nav-indicator--h" id="inspector-tab-indicator" aria-hidden="true"></div>
           <button class="inspector-tab inspector-tab--active" role="tab"
                   aria-selected="true" aria-controls="tab-general" data-tab="general">General</button>
           <button class="inspector-tab" role="tab"
@@ -281,7 +281,7 @@
                      aria-label="Search log entries">
               <button class="search-clear" id="log-search-clear"
                       aria-label="Clear log search" hidden>
-                <span class="icon--x"></span>
+                <span class="icon--search-clear"></span>
               </button>
             </div>
           </div>
